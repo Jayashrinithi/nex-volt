@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import {
-  ref,
-  onValue,
-  push,
-  set,
-} from "firebase/database";
-
+import { ref, onValue } from "firebase/database";
 import { db } from "../services/firebase";
+
+import {
+  FaBolt,
+  FaChargingStation,
+  FaBatteryHalf,
+  FaWater,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 
 import { checkAlerts } from "../utils/checkAlerts";
 
@@ -22,188 +24,135 @@ function Dashboard() {
   const [alerts, setAlerts] = useState([]);
 
   useEffect(() => {
-    const liveDataRef = ref(db, "liveData");
+    const sensorRef = ref(db, "sensorData");
 
-    const historyRef = ref(db, "history");
+    const unsubscribe = onValue(sensorRef, (snapshot) => {
+      const firebaseData = snapshot.val();
 
-    const unsubscribe = onValue(
-      liveDataRef,
-      (snapshot) => {
-        const firebaseData = snapshot.val();
+      if (firebaseData) {
+        const formattedData = {
+          voltage: Number(firebaseData.voltage || 0),
+          current: Number(firebaseData.current || 0),
+          power: Number(firebaseData.power || 0),
+          energy: Number(firebaseData.energy || 0),
+          waterFlow: Number(
+            firebaseData.waterFlow || 0
+          ),
+        };
 
-        if (firebaseData) {
-          const safeData = {
-            voltage:
-              Number(firebaseData.voltage) || 0,
+        setData(formattedData);
 
-            current:
-              Number(firebaseData.current) || 0,
+        // CHECK ALERTS
+        const activeAlerts =
+          checkAlerts(formattedData);
 
-            power:
-              Number(firebaseData.power) || 0,
-
-            energy:
-              Number(firebaseData.energy) || 0,
-
-            waterFlow:
-              Number(firebaseData.waterFlow) || 0,
-          };
-
-          setData(safeData);
-
-          // SAVE HISTORY
-          const newHistoryRef =
-            push(historyRef);
-
-          set(newHistoryRef, {
-            date:
-              new Date().toLocaleDateString(),
-
-            time:
-              new Date().toLocaleTimeString(),
-
-            ...safeData,
-          });
-
-          // CHECK ALERTS
-          const detectedAlerts =
-            checkAlerts(safeData);
-
-          setAlerts(detectedAlerts);
-        }
+        setAlerts(activeAlerts);
       }
-    );
+    });
 
     return () => unsubscribe();
   }, []);
 
   return (
     <div style={styles.container}>
-      {/* HEADER */}
-      <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>
-            ⚡ NEX VOLT MONITOR
-          </h1>
 
-          <p style={styles.subtitle}>
-            Smart IoT Multimeter System
-          </p>
-        </div>
+      {/* TITLE */}
+      <h1 style={styles.title}>
+        ⚡ NEX VOLT DASHBOARD
+      </h1>
 
-        <div style={styles.liveBadge}>
-          🟢 LIVE
-        </div>
-      </div>
-
-      {/* ALERTS */}
+      {/* ALERT SECTION */}
       {alerts.length > 0 && (
         <div style={styles.alertBox}>
-          <h2>⚠ Active Alerts</h2>
+          <div style={styles.alertTitle}>
+            <FaExclamationTriangle />
+            <span>Alerts Detected</span>
+          </div>
 
           {alerts.map((alert, index) => (
-            <p key={index}>
-              {String(alert)}
-            </p>
+            <div key={index} style={styles.alertText}>
+              {alert}
+            </div>
           ))}
         </div>
       )}
 
-      {/* SENSOR CARDS */}
+      {/* CARDS */}
       <div style={styles.grid}>
+
+        {/* VOLTAGE */}
         <Card
+          icon={<FaBolt />}
           title="Voltage"
-          value={data.voltage}
-          unit="V"
-          icon="⚡"
-          color="#3b82f6"
+          value={`${data.voltage} V`}
+          glow="cyan"
         />
 
+        {/* CURRENT */}
         <Card
+          icon={<FaChargingStation />}
           title="Current"
-          value={data.current}
-          unit="A"
-          icon="🔌"
-          color="#22c55e"
+          value={`${data.current} A`}
+          glow="#22c55e"
         />
 
+        {/* POWER */}
         <Card
+          icon={<FaBolt />}
           title="Power"
-          value={data.power}
-          unit="W"
-          icon="💡"
-          color="#f59e0b"
+          value={`${data.power} W`}
+          glow="#f59e0b"
         />
 
+        {/* ENERGY */}
         <Card
+          icon={<FaBatteryHalf />}
           title="Energy"
-          value={data.energy}
-          unit="kWh"
-          icon="📊"
-          color="#a855f7"
+          value={`${data.energy} kWh`}
+          glow="#a855f7"
         />
 
+        {/* WATER FLOW */}
         <Card
+          icon={<FaWater />}
           title="Water Flow"
-          value={data.waterFlow}
-          unit="L/min"
-          icon="💧"
-          color="#06b6d4"
+          value={`${data.waterFlow} L/min`}
+          glow="#06b6d4"
         />
       </div>
     </div>
   );
 }
 
+/* CARD COMPONENT */
 function Card({
+  icon,
   title,
   value,
-  unit,
-  icon,
-  color,
+  glow,
 }) {
   return (
     <div
       style={{
-        background:
-          "rgba(255,255,255,0.08)",
-
-        padding: "30px",
-
-        borderRadius: "20px",
-
-        backdropFilter: "blur(10px)",
-
-        border: `1px solid ${color}`,
-
-        boxShadow: `0 0 15px ${color}`,
+        ...styles.card,
+        boxShadow: `0 0 20px ${glow}`,
       }}
     >
       <div
         style={{
-          fontSize: "40px",
-          marginBottom: "15px",
+          ...styles.iconBox,
+          background: glow,
         }}
       >
         {icon}
       </div>
 
-      <h3
-        style={{
-          color: "#cbd5e1",
-          marginBottom: "10px",
-        }}
-      >
+      <h2 style={styles.cardTitle}>
         {title}
-      </h3>
+      </h2>
 
-      <h1
-        style={{
-          fontSize: "36px",
-          color,
-        }}
-      >
-        {Number(value).toFixed(2)} {unit}
+      <h1 style={styles.cardValue}>
+        {value}
       </h1>
     </div>
   );
@@ -212,71 +161,85 @@ function Card({
 const styles = {
   container: {
     minHeight: "100vh",
-
-    padding: "40px",
-
+    padding: "30px",
+    paddingLeft: "90px",
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
-
     color: "white",
   },
 
-  header: {
-    display: "flex",
-
-    justifyContent: "space-between",
-
-    alignItems: "center",
-
-    marginBottom: "40px",
-  },
-
   title: {
-    fontSize: "40px",
-
-    marginBottom: "10px",
-  },
-
-  subtitle: {
-    color: "#cbd5e1",
-
-    fontSize: "18px",
-  },
-
-  liveBadge: {
-    background: "#16a34a",
-
-    padding: "10px 20px",
-
-    borderRadius: "30px",
-
-    fontWeight: "bold",
-
-    boxShadow: "0 0 15px #16a34a",
+    fontSize: "38px",
+    marginBottom: "30px",
   },
 
   alertBox: {
-    background:
-      "rgba(255,0,0,0.15)",
-
+    background: "rgba(255,0,0,0.15)",
     border: "1px solid red",
-
-    padding: "20px",
-
     borderRadius: "15px",
-
+    padding: "20px",
     marginBottom: "30px",
+    boxShadow: "0 0 20px rgba(255,0,0,0.4)",
+  },
 
-    boxShadow: "0 0 15px red",
+  alertTitle: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "22px",
+    marginBottom: "15px",
+    color: "#ff4d4f",
+    fontWeight: "bold",
+  },
+
+  alertText: {
+    marginBottom: "10px",
+    fontSize: "16px",
   },
 
   grid: {
     display: "grid",
-
     gridTemplateColumns:
-      "repeat(auto-fit, minmax(240px, 1fr))",
-
+      "repeat(auto-fit, minmax(250px, 1fr))",
     gap: "25px",
+  },
+
+  card: {
+    background:
+      "rgba(255,255,255,0.08)",
+
+    padding: "30px",
+
+    borderRadius: "20px",
+
+    backdropFilter: "blur(10px)",
+
+    transition: "0.3s",
+  },
+
+  iconBox: {
+    width: "60px",
+    height: "60px",
+    borderRadius: "15px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "28px",
+    color: "#0f172a",
+    marginBottom: "20px",
+  },
+
+  cardTitle: {
+    margin: 0,
+    marginBottom: "15px",
+    fontSize: "22px",
+    color: "#cbd5e1",
+  },
+
+  cardValue: {
+    margin: 0,
+    fontSize: "36px",
+    fontWeight: "bold",
   },
 };
 

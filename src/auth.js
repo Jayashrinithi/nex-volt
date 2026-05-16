@@ -1,44 +1,32 @@
 export const Auth = {
-  
   // =========================
   // SIGNUP
   // =========================
   signup(email, password, cb) {
-
-    // CHECK EMPTY FIELDS
     if (!email || !password) {
       alert("Please fill all fields");
       return false;
     }
 
-    // USER OBJECT
+    const existingUser = JSON.parse(localStorage.getItem("userData"));
+
+    // prevent overwrite
+    if (existingUser?.email === email) {
+      alert("User already exists. Please login.");
+      return false;
+    }
+
     const user = {
       email,
-      password,
-      createdAt: new Date().toLocaleString(),
+      password, // (demo only)
+      createdAt: new Date().toISOString(),
     };
 
-    // SAVE USER
-    localStorage.setItem(
-      "userData",
-      JSON.stringify(user)
-    );
+    localStorage.setItem("userData", JSON.stringify(user));
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("currentUser", email);
 
-    // LOGIN STATUS
-    localStorage.setItem(
-      "isLoggedIn",
-      "true"
-    );
-
-    // SAVE CURRENT USER
-    localStorage.setItem(
-      "currentUser",
-      email
-    );
-
-    // CALLBACK
-    if (cb) cb();
-
+    cb?.();
     return true;
   },
 
@@ -46,35 +34,29 @@ export const Auth = {
   // LOGIN
   // =========================
   login(email, password, cb) {
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return false;
+    }
 
-    const savedUser = JSON.parse(
-      localStorage.getItem("userData")
-    );
+    const savedUser = JSON.parse(localStorage.getItem("userData"));
 
-    // CHECK USER
+    if (!savedUser) {
+      alert("No user found. Please sign up first.");
+      return false;
+    }
+
     if (
-      savedUser &&
       savedUser.email === email &&
       savedUser.password === password
     ) {
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("currentUser", email);
 
-      // LOGIN SUCCESS
-      localStorage.setItem(
-        "isLoggedIn",
-        "true"
-      );
-
-      localStorage.setItem(
-        "currentUser",
-        email
-      );
-
-      if (cb) cb();
-
+      cb?.();
       return true;
     }
 
-    // LOGIN FAILED
     return false;
   },
 
@@ -82,60 +64,40 @@ export const Auth = {
   // LOGOUT
   // =========================
   logout(cb) {
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("currentUser");
 
-    localStorage.removeItem(
-      "isLoggedIn"
-    );
-
-    localStorage.removeItem(
-      "currentUser"
-    );
-
-    if (cb) cb();
+    cb?.();
   },
 
   // =========================
-  // CHECK AUTHENTICATION
+  // CHECK AUTH
   // =========================
   isAuthenticated() {
-    return (
-      localStorage.getItem(
-        "isLoggedIn"
-      ) === "true"
-    );
+    return localStorage.getItem("isLoggedIn") === "true";
   },
 
   // =========================
-  // GET CURRENT USER
+  // CURRENT USER
   // =========================
   getCurrentUser() {
-    return localStorage.getItem(
-      "currentUser"
-    );
+    return localStorage.getItem("currentUser");
   },
 
   // =========================
   // CHANGE PASSWORD
   // =========================
   changePassword(newPassword) {
+    if (!newPassword) return false;
 
-    const savedUser = JSON.parse(
-      localStorage.getItem("userData")
-    );
+    const savedUser = JSON.parse(localStorage.getItem("userData"));
 
-    if (savedUser) {
+    if (!savedUser) return false;
 
-      savedUser.password =
-        newPassword;
+    savedUser.password = newPassword;
 
-      localStorage.setItem(
-        "userData",
-        JSON.stringify(savedUser)
-      );
+    localStorage.setItem("userData", JSON.stringify(savedUser));
 
-      return true;
-    }
-
-    return false;
+    return true;
   },
 };

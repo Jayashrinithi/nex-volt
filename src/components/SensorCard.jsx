@@ -1,4 +1,15 @@
-function SensorCard({ title, value, unit, color }) {
+function SensorCard({
+  title = "Sensor",
+  value = 0,
+  unit = "",
+  color = "#06b6d4",
+}) {
+  // SAFE VALUE HANDLING
+  const displayValue =
+    value !== undefined && value !== null
+      ? Number(value).toFixed(2)
+      : "0.00";
+
   return (
     <div
       style={{
@@ -8,6 +19,8 @@ function SensorCard({ title, value, unit, color }) {
         boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
         textAlign: "center",
         borderLeft: `6px solid ${color}`,
+        transition: "0.3s",
+        minWidth: "150px",
       }}
     >
       <h3
@@ -23,9 +36,13 @@ function SensorCard({ title, value, unit, color }) {
         style={{
           fontSize: "32px",
           color: color,
+          margin: 0,
         }}
       >
-        {value} {unit}
+        {displayValue}{" "}
+        <span style={{ fontSize: "16px", color: "#666" }}>
+          {unit}
+        </span>
       </h1>
     </div>
   );

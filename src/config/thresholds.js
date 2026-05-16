@@ -1,13 +1,26 @@
 export const THRESHOLDS = {
-  voltage: { min: 210, max: 250 },
+  voltage: {
+    min: 180,
+    max: 250,
+  },
 
-  current: { min: 0, max: 10 },
+  current: {
+    min: 0,
+    max: 10,
+  },
 
-  power: { min: 0, max: 2000 },
+  power: {
+    min: 0,
+    max: 3000,
+  },
 
-  energy: { max: 50 },
+  energy: {
+    min: 0,
+    max: 100,
+  },
 
-  waterFlow: { max: 20 },
-
-  waterLevel: { min: 20, max: 90 }
+  waterFlow: {
+    min: 0,
+    max: 50,
+  },
 };

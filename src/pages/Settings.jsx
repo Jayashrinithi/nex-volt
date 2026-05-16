@@ -11,305 +11,133 @@ import {
 } from "react-icons/fa";
 
 function Settings() {
-  const [darkMode, setDarkMode] =
-    useState(true);
+  const defaultSettings = {
+    darkMode: true,
+    alertsEnabled: true,
+    soundEnabled: false,
+    notificationEnabled: false,
+    autoRelayCutoff: true,
 
-  const [alertsEnabled, setAlertsEnabled] =
-    useState(true);
+    voltage: { min: 180, max: 250 },
+    current: { min: 0, max: 10 },
+    power: { max: 3000 },
+    energy: { max: 50 },
+    waterFlow: { min: 1, max: 20 },
+  };
 
-  const [soundEnabled, setSoundEnabled] =
-    useState(false);
+  const [settings, setSettings] = useState(defaultSettings);
 
-  const [voltageMax, setVoltageMax] =
-    useState(250);
-
-  const [currentMax, setCurrentMax] =
-    useState(10);
-
-  const [autoRelayCutoff, setAutoRelayCutoff] =
-    useState(true);
-
-  const [notificationEnabled, setNotificationEnabled] =
-    useState(false);
-
-  // LOAD SAVED SETTINGS
+  // LOAD
   useEffect(() => {
-    const savedDarkMode =
-      localStorage.getItem("darkMode");
+    const saved = localStorage.getItem("settings");
 
-    const savedAlerts =
-      localStorage.getItem("alertsEnabled");
-
-    const savedSound =
-      localStorage.getItem("soundEnabled");
-
-    const savedVoltage =
-      localStorage.getItem("voltageMax");
-
-    const savedCurrent =
-      localStorage.getItem("currentMax");
-
-    const savedRelay =
-      localStorage.getItem("autoRelayCutoff");
-
-    const savedNotification =
-      localStorage.getItem(
-        "notificationEnabled"
-      );
-
-    if (savedDarkMode !== null) {
-      setDarkMode(
-        JSON.parse(savedDarkMode)
-      );
-    }
-
-    if (savedAlerts !== null) {
-      setAlertsEnabled(
-        JSON.parse(savedAlerts)
-      );
-    }
-
-    if (savedSound !== null) {
-      setSoundEnabled(
-        JSON.parse(savedSound)
-      );
-    }
-
-    if (savedVoltage !== null) {
-      setVoltageMax(savedVoltage);
-    }
-
-    if (savedCurrent !== null) {
-      setCurrentMax(savedCurrent);
-    }
-
-    if (savedRelay !== null) {
-      setAutoRelayCutoff(
-        JSON.parse(savedRelay)
-      );
-    }
-
-    if (savedNotification !== null) {
-      setNotificationEnabled(
-        JSON.parse(savedNotification)
-      );
+    if (saved) {
+      setSettings(JSON.parse(saved));
     }
   }, []);
 
-  // SAVE SETTINGS
+  // SAVE ALL
   const saveSettings = () => {
-    localStorage.setItem(
-      "darkMode",
-      JSON.stringify(darkMode)
-    );
-
-    localStorage.setItem(
-      "alertsEnabled",
-      JSON.stringify(alertsEnabled)
-    );
-
-    localStorage.setItem(
-      "soundEnabled",
-      JSON.stringify(soundEnabled)
-    );
-
-    localStorage.setItem(
-      "voltageMax",
-      voltageMax
-    );
-
-    localStorage.setItem(
-      "currentMax",
-      currentMax
-    );
-
-    localStorage.setItem(
-      "autoRelayCutoff",
-      JSON.stringify(autoRelayCutoff)
-    );
-
-    localStorage.setItem(
-      "notificationEnabled",
-      JSON.stringify(notificationEnabled)
-    );
-
+    localStorage.setItem("settings", JSON.stringify(settings));
     alert("✅ Settings Saved");
+  };
+
+  // TOGGLE
+  const toggle = (key) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  // INPUT UPDATE
+  const updateThreshold = (type, field, value) => {
+    setSettings((prev) => ({
+      ...prev,
+      [type]: {
+        ...prev[type],
+        [field]: Number(value),
+      },
+    }));
   };
 
   // CLEAR HISTORY
   const clearHistory = () => {
-    const confirmDelete = window.confirm(
-      "Clear all saved history?"
-    );
-
-    if (confirmDelete) {
-      localStorage.clear();
-
+    const ok = window.confirm("Clear all history?");
+    if (ok) {
+      localStorage.removeItem("history");
       alert("🗑 History Cleared");
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
+    <div style={styles.container}>
+      <h1 style={styles.title}>⚙ Smart IoT Settings</h1>
 
-        padding: "40px",
-
-        marginLeft: "80px",
-
-        background: darkMode
-          ? "linear-gradient(to right, #0f172a, #1e293b)"
-          : "#f1f5f9",
-
-        color: darkMode
-          ? "white"
-          : "black",
-
-        transition: "0.3s",
-      }}
-    >
-      <h1 style={styles.title}>
-        ⚙ Smart IoT Settings
-      </h1>
-
-      {/* SETTINGS CARD */}
       <div style={styles.card}>
-        
-        {/* DARK MODE */}
-        <SettingRow
-          icon={<FaMoon />}
-          title="Dark Mode"
-          value={darkMode}
-          onChange={() =>
-            setDarkMode(!darkMode)
-          }
+        {/* TOGGLES */}
+        <SettingRow icon={<FaMoon />} title="Dark Mode"
+          value={settings.darkMode}
+          onChange={() => toggle("darkMode")}
         />
 
-        {/* ALERTS */}
-        <SettingRow
-          icon={<FaBell />}
-          title="Enable Alerts"
-          value={alertsEnabled}
-          onChange={() =>
-            setAlertsEnabled(
-              !alertsEnabled
-            )
-          }
+        <SettingRow icon={<FaBell />} title="Enable Alerts"
+          value={settings.alertsEnabled}
+          onChange={() => toggle("alertsEnabled")}
         />
 
-        {/* SOUND */}
-        <SettingRow
-          icon={<FaVolumeUp />}
-          title="Sound Alarm"
-          value={soundEnabled}
-          onChange={() =>
-            setSoundEnabled(
-              !soundEnabled
-            )
-          }
+        <SettingRow icon={<FaVolumeUp />} title="Sound Alarm"
+          value={settings.soundEnabled}
+          onChange={() => toggle("soundEnabled")}
         />
 
-        {/* RELAY */}
-        <SettingRow
-          icon={"🔌"}
-          title="Auto Relay Cutoff"
-          value={autoRelayCutoff}
-          onChange={() =>
-            setAutoRelayCutoff(
-              !autoRelayCutoff
-            )
-          }
+        <SettingRow icon="📱" title="Notifications"
+          value={settings.notificationEnabled}
+          onChange={() => toggle("notificationEnabled")}
         />
 
-        {/* NOTIFICATIONS */}
-        <SettingRow
-          icon={"📱"}
-          title="Push Notifications"
-          value={notificationEnabled}
-          onChange={() =>
-            setNotificationEnabled(
-              !notificationEnabled
-            )
-          }
+        <SettingRow icon="🔌" title="Auto Relay Cutoff"
+          value={settings.autoRelayCutoff}
+          onChange={() => toggle("autoRelayCutoff")}
         />
 
-        {/* VOLTAGE */}
-        <InputRow
-          icon={<FaBolt />}
-          title="Voltage Limit"
-          value={voltageMax}
+        {/* INPUTS */}
+        <InputRow icon={<FaBolt />} title="Voltage Limit"
+          value={settings.voltage.max}
           unit="V"
           onChange={(e) =>
-            setVoltageMax(
-              e.target.value
-            )
+            updateThreshold("voltage", "max", e.target.value)
           }
         />
 
-        {/* CURRENT */}
-        <InputRow
-          icon={<FaPlug />}
-          title="Current Limit"
-          value={currentMax}
+        <InputRow icon={<FaPlug />} title="Current Limit"
+          value={settings.current.max}
           unit="A"
           onChange={(e) =>
-            setCurrentMax(
-              e.target.value
-            )
+            updateThreshold("current", "max", e.target.value)
           }
         />
 
-        {/* SAVE BUTTON */}
-        <button
-          onClick={saveSettings}
-          style={styles.saveButton}
-        >
-          <FaSave
-            style={{
-              marginRight: "10px",
-            }}
-          />
-          Save Settings
+        {/* BUTTONS */}
+        <button onClick={saveSettings} style={styles.save}>
+          <FaSave /> Save Settings
         </button>
 
-        {/* CLEAR HISTORY */}
-        <button
-          onClick={clearHistory}
-          style={styles.deleteButton}
-        >
-          <FaTrash
-            style={{
-              marginRight: "10px",
-            }}
-          />
-          Clear History
+        <button onClick={clearHistory} style={styles.delete}>
+          <FaTrash /> Clear History
         </button>
       </div>
     </div>
   );
 }
 
-// TOGGLE ROW
-function SettingRow({
-  icon,
-  title,
-  value,
-  onChange,
-}) {
+/* ================= COMPONENTS ================= */
+
+function SettingRow({ icon, title, value, onChange }) {
   return (
     <div style={styles.row}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
-        <span style={{ fontSize: "20px" }}>
-          {icon}
-        </span>
-
+      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        {icon}
         <h3>{title}</h3>
       </div>
 
@@ -317,10 +145,7 @@ function SettingRow({
         onClick={onChange}
         style={{
           ...styles.toggle,
-
-          background: value
-            ? "#22c55e"
-            : "#ef4444",
+          background: value ? "#22c55e" : "#ef4444",
         }}
       >
         {value ? "ON" : "OFF"}
@@ -329,166 +154,94 @@ function SettingRow({
   );
 }
 
-// INPUT ROW
-function InputRow({
-  icon,
-  title,
-  value,
-  onChange,
-  unit,
-}) {
+function InputRow({ icon, title, value, onChange, unit }) {
   return (
     <div style={styles.row}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
-        <span style={{ fontSize: "20px" }}>
-          {icon}
-        </span>
-
+      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        {icon}
         <h3>{title}</h3>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-        }}
-      >
-        <input
-          value={value}
-          onChange={onChange}
-          style={styles.input}
-        />
-
+      <div style={{ display: "flex", gap: "10px" }}>
+        <input value={value} onChange={onChange} style={styles.input} />
         <span>{unit}</span>
       </div>
     </div>
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = {
+  container: {
+    minHeight: "100vh",
+    padding: "40px",
+    marginLeft: "80px",
+    background: "linear-gradient(to right, #0f172a, #1e293b)",
+    color: "white",
+  },
+
   title: {
-    fontSize: "42px",
-
+    fontSize: "40px",
     marginBottom: "30px",
-
-    fontWeight: "bold",
   },
 
   card: {
-    background:
-      "rgba(255,255,255,0.08)",
-
-    padding: "35px",
-
-    borderRadius: "20px",
-
     maxWidth: "700px",
-
-    backdropFilter: "blur(10px)",
-
-    boxShadow:
-      "0 0 25px rgba(0,255,255,0.2)",
+    background: "rgba(255,255,255,0.08)",
+    padding: "30px",
+    borderRadius: "20px",
+    boxShadow: "0 0 20px cyan",
   },
 
   row: {
     display: "flex",
-
-    justifyContent:
-      "space-between",
-
-    alignItems: "center",
-
-    marginBottom: "28px",
-
-    borderBottom:
-      "1px solid rgba(255,255,255,0.08)",
-
-    paddingBottom: "15px",
+    justifyContent: "space-between",
+    marginBottom: "20px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+    paddingBottom: "10px",
   },
 
   toggle: {
+    padding: "8px 20px",
     border: "none",
-
-    padding: "10px 24px",
-
     borderRadius: "10px",
-
     color: "white",
-
-    fontWeight: "bold",
-
     cursor: "pointer",
-
-    minWidth: "80px",
   },
 
   input: {
-    padding: "10px",
-
-    borderRadius: "10px",
-
+    width: "80px",
+    padding: "8px",
+    borderRadius: "8px",
     border: "none",
-
-    width: "120px",
-
     textAlign: "center",
-
-    fontSize: "16px",
   },
 
-  saveButton: {
+  save: {
     width: "100%",
-
-    padding: "16px",
-
+    padding: "15px",
+    marginTop: "20px",
     background: "#06b6d4",
-
     border: "none",
-
-    borderRadius: "12px",
-
+    borderRadius: "10px",
     color: "white",
-
-    fontSize: "18px",
-
+    fontSize: "16px",
     fontWeight: "bold",
-
     cursor: "pointer",
-
-    marginBottom: "15px",
-
-    boxShadow:
-      "0 0 15px rgba(6,182,212,0.5)",
   },
 
-  deleteButton: {
+  delete: {
     width: "100%",
-
-    padding: "16px",
-
+    padding: "15px",
+    marginTop: "10px",
     background: "#ef4444",
-
     border: "none",
-
-    borderRadius: "12px",
-
+    borderRadius: "10px",
     color: "white",
-
-    fontSize: "18px",
-
+    fontSize: "16px",
     fontWeight: "bold",
-
     cursor: "pointer",
-
-    boxShadow:
-      "0 0 15px rgba(239,68,68,0.5)",
   },
 };
 

@@ -3,9 +3,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
+  FaBolt,
   FaEnvelope,
   FaLock,
-  FaBolt,
   FaEye,
   FaEyeSlash,
   FaUserShield,
@@ -28,53 +28,44 @@ function Login() {
   const [showPassword, setShowPassword] =
     useState(false);
 
-  const [loading, setLoading] =
-    useState(false);
-
-  // SUBMIT
   const handleSubmit = () => {
-    if (!email || !password) {
-      alert("⚠ Fill all fields");
 
+    if (!email || !password) {
+      alert("Please fill all fields");
       return;
     }
 
-    setLoading(true);
-
     // LOGIN
     if (isLogin) {
+
       const success = Auth.login(
         email,
         password,
         () => {
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 1000);
+          navigate("/dashboard");
         }
       );
 
       if (!success) {
-        setLoading(false);
-
         alert(
-          "❌ Invalid Email or Password"
+          "Invalid email or password"
         );
       }
     }
 
     // SIGNUP
     else {
+
       Auth.signup(
         email,
         password,
         () => {
-          setTimeout(() => {
-            alert(
-              "✅ Signup Successful"
-            );
 
-            navigate("/dashboard");
-          }, 1000);
+          alert(
+            "Signup Successful"
+          );
+
+          navigate("/dashboard");
         }
       );
     }
@@ -82,38 +73,25 @@ function Login() {
 
   return (
     <div style={styles.container}>
-      {/* BACKGROUND EFFECT */}
-      <div style={styles.blur1}></div>
-
-      <div style={styles.blur2}></div>
 
       {/* LOGIN CARD */}
       <div style={styles.card}>
+
         {/* LOGO */}
         <div style={styles.logoBox}>
-          <FaBolt
-            style={styles.logoIcon}
-          />
-
-          <h1 style={styles.logoText}>
-            NEX VOLT
-          </h1>
+          <FaBolt />
         </div>
 
         {/* TITLE */}
-        <h2 style={styles.title}>
+        <h1 style={styles.title}>
           {isLogin
-            ? "Smart IoT Login"
-            : "Create Account"}
-        </h2>
-
-        <p style={styles.subtitle}>
-          Smart Energy Monitoring
-          System
-        </p>
+            ? "NEX VOLT LOGIN"
+            : "NEX VOLT SIGN UP"}
+        </h1>
 
         {/* EMAIL */}
         <div style={styles.inputBox}>
+
           <FaEnvelope
             style={styles.icon}
           />
@@ -123,9 +101,7 @@ function Login() {
             placeholder="Enter Email"
             value={email}
             onChange={(e) =>
-              setEmail(
-                e.target.value
-              )
+              setEmail(e.target.value)
             }
             style={styles.input}
           />
@@ -133,6 +109,7 @@ function Login() {
 
         {/* PASSWORD */}
         <div style={styles.inputBox}>
+
           <FaLock
             style={styles.icon}
           />
@@ -146,9 +123,7 @@ function Login() {
             placeholder="Enter Password"
             value={password}
             onChange={(e) =>
-              setPassword(
-                e.target.value
-              )
+              setPassword(e.target.value)
             }
             style={styles.input}
           />
@@ -169,45 +144,25 @@ function Login() {
           </div>
         </div>
 
-        {/* LOGIN BUTTON */}
+        {/* BUTTON */}
         <button
           onClick={handleSubmit}
           style={styles.button}
         >
-          {loading ? (
-            "Please Wait..."
-          ) : isLogin ? (
-            <>
-              <FaUserShield
-                style={{
-                  marginRight:
-                    "10px",
-                }}
-              />
-              LOGIN
-            </>
-          ) : (
-            <>
-              <FaUserShield
-                style={{
-                  marginRight:
-                    "10px",
-                }}
-              />
-              SIGN UP
-            </>
-          )}
+          <FaUserShield />
+
+          <span>
+            {isLogin
+              ? "LOGIN"
+              : "SIGN UP"}
+          </span>
         </button>
 
         {/* TOGGLE */}
         <p
-          onClick={() => {
-            setIsLogin(
-              !isLogin
-            );
-
-            setLoading(false);
-          }}
+          onClick={() =>
+            setIsLogin(!isLogin)
+          }
           style={styles.toggle}
         >
           {isLogin
@@ -215,230 +170,114 @@ function Login() {
             : "Already have an account? Login"}
         </p>
 
-        {/* FOOTER */}
-        <p style={styles.footer}>
-          Smart IoT Multimeter v2.0
-        </p>
       </div>
     </div>
   );
 }
 
-/* ================= STYLES ================= */
-
 const styles = {
   container: {
     display: "flex",
-
     justifyContent: "center",
-
     alignItems: "center",
-
-    height: "100vh",
-
-    overflow: "hidden",
-
-    position: "relative",
-
+    minHeight: "100vh",
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
-  },
-
-  blur1: {
-    position: "absolute",
-
-    width: "300px",
-
-    height: "300px",
-
-    background: "#06b6d4",
-
-    filter: "blur(140px)",
-
-    top: "-80px",
-
-    left: "-80px",
-
-    opacity: 0.4,
-  },
-
-  blur2: {
-    position: "absolute",
-
-    width: "300px",
-
-    height: "300px",
-
-    background: "#3b82f6",
-
-    filter: "blur(140px)",
-
-    bottom: "-80px",
-
-    right: "-80px",
-
-    opacity: 0.4,
+    padding: "20px",
   },
 
   card: {
-    width: "380px",
-
+    width: "100%",
+    maxWidth: "420px",
     padding: "40px",
-
     borderRadius: "25px",
-
     background:
       "rgba(255,255,255,0.08)",
 
-    backdropFilter:
-      "blur(12px)",
+    backdropFilter: "blur(12px)",
 
     boxShadow:
-      "0 0 30px rgba(0,255,255,0.2)",
+      "0 0 25px rgba(0,255,255,0.3)",
 
     textAlign: "center",
-
-    position: "relative",
-
-    zIndex: 2,
   },
 
   logoBox: {
+    width: "80px",
+    height: "80px",
+    margin: "0 auto 20px",
+    borderRadius: "20px",
+    background: "cyan",
     display: "flex",
-
     alignItems: "center",
-
     justifyContent: "center",
-
-    marginBottom: "20px",
-  },
-
-  logoIcon: {
-    fontSize: "40px",
-
-    color: "#06b6d4",
-
-    marginRight: "10px",
-  },
-
-  logoText: {
-    color: "white",
-
-    margin: 0,
-
-    fontSize: "34px",
+    fontSize: "38px",
+    color: "#0f172a",
+    boxShadow: "0 0 20px cyan",
   },
 
   title: {
     color: "white",
-
-    marginBottom: "10px",
-
-    fontSize: "28px",
-  },
-
-  subtitle: {
-    color: "#cbd5e1",
-
-    marginBottom: "30px",
-
-    fontSize: "15px",
+    marginBottom: "35px",
+    fontSize: "32px",
   },
 
   inputBox: {
     display: "flex",
-
     alignItems: "center",
-
     background:
-      "rgba(255,255,255,0.08)",
+      "rgba(255,255,255,0.1)",
 
-    padding: "14px",
+    borderRadius: "12px",
 
-    borderRadius: "14px",
+    marginBottom: "22px",
 
-    marginBottom: "20px",
-
-    border:
-      "1px solid rgba(255,255,255,0.08)",
+    padding: "0 15px",
   },
 
   icon: {
-    color: "#06b6d4",
-
-    marginRight: "12px",
-
+    color: "#cbd5e1",
     fontSize: "18px",
   },
 
   input: {
     flex: 1,
-
+    padding: "16px",
     background: "transparent",
-
     border: "none",
-
     outline: "none",
-
     color: "white",
-
     fontSize: "16px",
   },
 
   eye: {
     color: "#cbd5e1",
-
     cursor: "pointer",
+    fontSize: "18px",
   },
 
   button: {
     width: "100%",
-
-    padding: "15px",
-
-    background:
-      "linear-gradient(to right, #06b6d4, #0891b2)",
-
+    padding: "16px",
     border: "none",
-
-    borderRadius: "14px",
-
-    color: "white",
-
+    borderRadius: "12px",
+    background: "cyan",
+    color: "#0f172a",
     fontSize: "18px",
-
     fontWeight: "bold",
-
     cursor: "pointer",
-
-    marginTop: "10px",
-
-    boxShadow:
-      "0 0 15px rgba(0,255,255,0.4)",
-
     display: "flex",
-
-    alignItems: "center",
-
     justifyContent: "center",
+    alignItems: "center",
+    gap: "10px",
+    boxShadow: "0 0 15px cyan",
   },
 
   toggle: {
     marginTop: "25px",
-
     color: "#cbd5e1",
-
     cursor: "pointer",
-
     fontSize: "15px",
-  },
-
-  footer: {
-    marginTop: "30px",
-
-    color: "#94a3b8",
-
-    fontSize: "13px",
   },
 };
 

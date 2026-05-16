@@ -1,211 +1,97 @@
 import { useEffect, useState } from "react";
-
-import {
-  ref,
-  onValue,
-} from "firebase/database";
-
+import { ref, onValue } from "firebase/database";
 import { db } from "../services/firebase";
 
 import {
+  ResponsiveContainer,
   LineChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
+  Legend,
 } from "recharts";
 
 import {
-  FaBolt,
-  FaPlug,
   FaChartLine,
-  FaTint,
+  FaBolt,
+  FaWater,
   FaBatteryHalf,
 } from "react-icons/fa";
 
 function Analytics() {
-  const [history, setHistory] =
-    useState([]);
-
-  const [avgVoltage, setAvgVoltage] =
-    useState(0);
-
-  const [avgCurrent, setAvgCurrent] =
-    useState(0);
-
-  const [totalEnergy, setTotalEnergy] =
-    useState(0);
+  const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    const historyRef = ref(
-      db,
-      "history"
-    );
+    const historyRef = ref(db, "history");
 
-    const unsubscribe = onValue(
-      historyRef,
-      (snapshot) => {
-        const data = snapshot.val();
+    const unsubscribe = onValue(historyRef, (snapshot) => {
+      const data = snapshot.val();
 
-        if (data) {
-          const formattedData =
-            Object.keys(data).map(
-              (key) => ({
-                id: key,
-                ...data[key],
-              })
-            );
+      if (data) {
+        const formattedData = Object.keys(data).map((key) => ({
+          id: key,
+          voltage: Number(data[key].voltage || 0),
+          current: Number(data[key].current || 0),
+          power: Number(data[key].power || 0),
+          energy: Number(data[key].energy || 0),
+          waterFlow: Number(data[key].waterFlow || 0),
+          time: data[key].time || "--:--",
+          date: data[key].date || "",
+        }));
 
-          setHistory(formattedData);
-
-          // CALCULATIONS
-          const voltageAvg =
-            formattedData.reduce(
-              (acc, item) =>
-                acc +
-                Number(
-                  item.voltage || 0
-                ),
-              0
-            ) /
-            formattedData.length;
-
-          const currentAvg =
-            formattedData.reduce(
-              (acc, item) =>
-                acc +
-                Number(
-                  item.current || 0
-                ),
-              0
-            ) /
-            formattedData.length;
-
-          const energySum =
-            formattedData.reduce(
-              (acc, item) =>
-                acc +
-                Number(
-                  item.energy || 0
-                ),
-              0
-            );
-
-          setAvgVoltage(
-            voltageAvg.toFixed(2)
-          );
-
-          setAvgCurrent(
-            currentAvg.toFixed(2)
-          );
-
-          setTotalEnergy(
-            energySum.toFixed(2)
-          );
-        }
+        setHistory(formattedData.reverse());
       }
-    );
+    });
 
     return () => unsubscribe();
   }, []);
 
   return (
     <div style={styles.container}>
-      {/* HEADER */}
+
+      {/* TITLE */}
       <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>
-            📊 Smart Analytics
-          </h1>
+        <FaChartLine size={35} color="cyan" />
 
-          <p style={styles.subtitle}>
-            Real-Time IoT Data
-            Visualization
-          </p>
-        </div>
-
-        <div style={styles.liveBadge}>
-          🟢 LIVE ANALYTICS
-        </div>
+        <h1 style={styles.title}>
+          Analytics Dashboard
+        </h1>
       </div>
 
-      {/* SUMMARY CARDS */}
-      <div style={styles.summaryGrid}>
-        <SummaryCard
-          title="Avg Voltage"
-          value={avgVoltage}
-          unit="V"
-          icon={<FaBolt />}
-          color="#3b82f6"
-        />
-
-        <SummaryCard
-          title="Avg Current"
-          value={avgCurrent}
-          unit="A"
-          icon={<FaPlug />}
-          color="#22c55e"
-        />
-
-        <SummaryCard
-          title="Total Energy"
-          value={totalEnergy}
-          unit="kWh"
-          icon={<FaBatteryHalf />}
-          color="#a855f7"
-        />
-
-        <SummaryCard
-          title="Records"
-          value={history.length}
-          unit=""
-          icon={<FaChartLine />}
-          color="#f59e0b"
-        />
-      </div>
-
-      {/* VOLTAGE CHART */}
-      <ChartBox
-        title="⚡ Voltage Trend (V)"
+      {/* VOLTAGE */}
+      <ChartCard
+        title="Voltage Trend (V)"
+        icon={<FaBolt />}
       >
         <LineChart data={history}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis dataKey="time" />
-
-          <YAxis />
-
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="time" stroke="white" />
+          <YAxis stroke="white" />
           <Tooltip />
+          <Legend />
 
           <Line
             type="monotone"
             dataKey="voltage"
-            stroke="#3b82f6"
+            stroke="#00ffff"
             strokeWidth={3}
           />
         </LineChart>
-      </ChartBox>
+      </ChartCard>
 
-      {/* CURRENT CHART */}
-      <ChartBox
-        title="🔌 Current Trend (A)"
+      {/* CURRENT */}
+      <ChartCard
+        title="Current Trend (A)"
+        icon={<FaBolt />}
       >
         <LineChart data={history}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis dataKey="time" />
-
-          <YAxis />
-
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="time" stroke="white" />
+          <YAxis stroke="white" />
           <Tooltip />
+          <Legend />
 
           <Line
             type="monotone"
@@ -214,46 +100,40 @@ function Analytics() {
             strokeWidth={3}
           />
         </LineChart>
-      </ChartBox>
+      </ChartCard>
 
-      {/* POWER CHART */}
-      <ChartBox
-        title="💡 Power Trend (W)"
+      {/* POWER */}
+      <ChartCard
+        title="Power Trend (W)"
+        icon={<FaBatteryHalf />}
       >
-        <AreaChart data={history}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis dataKey="time" />
-
-          <YAxis />
-
+        <LineChart data={history}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="time" stroke="white" />
+          <YAxis stroke="white" />
           <Tooltip />
+          <Legend />
 
-          <Area
+          <Line
             type="monotone"
             dataKey="power"
             stroke="#f59e0b"
-            fill="#f59e0b"
+            strokeWidth={3}
           />
-        </AreaChart>
-      </ChartBox>
+        </LineChart>
+      </ChartCard>
 
-      {/* ENERGY CHART */}
-      <ChartBox
-        title="📈 Energy Trend (kWh)"
+      {/* ENERGY */}
+      <ChartCard
+        title="Energy Trend (kWh)"
+        icon={<FaBatteryHalf />}
       >
         <LineChart data={history}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis dataKey="time" />
-
-          <YAxis />
-
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="time" stroke="white" />
+          <YAxis stroke="white" />
           <Tooltip />
+          <Legend />
 
           <Line
             type="monotone"
@@ -262,49 +142,50 @@ function Analytics() {
             strokeWidth={3}
           />
         </LineChart>
-      </ChartBox>
+      </ChartCard>
 
-      {/* WATER FLOW CHART */}
-      <ChartBox
-        title="💧 Water Flow Trend (L/min)"
+      {/* WATER FLOW */}
+      <ChartCard
+        title="Water Flow Trend (L/min)"
+        icon={<FaWater />}
       >
-        <AreaChart data={history}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis dataKey="time" />
-
-          <YAxis />
-
+        <LineChart data={history}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="time" stroke="white" />
+          <YAxis stroke="white" />
           <Tooltip />
+          <Legend />
 
-          <Area
+          <Line
             type="monotone"
             dataKey="waterFlow"
             stroke="#06b6d4"
-            fill="#06b6d4"
+            strokeWidth={3}
           />
-        </AreaChart>
-      </ChartBox>
+        </LineChart>
+      </ChartCard>
     </div>
   );
 }
 
-// CHART BOX
-function ChartBox({
-  title,
-  children,
-}) {
+/* CHART CARD */
+function ChartCard({ title, icon, children }) {
   return (
     <div style={styles.card}>
-      <h2 style={styles.chartTitle}>
-        {title}
-      </h2>
+
+      <div style={styles.cardHeader}>
+        <div style={styles.iconBox}>
+          {icon}
+        </div>
+
+        <h2 style={styles.cardTitle}>
+          {title}
+        </h2>
+      </div>
 
       <ResponsiveContainer
         width="100%"
-        height={320}
+        height={300}
       >
         {children}
       </ResponsiveContainer>
@@ -312,119 +193,29 @@ function ChartBox({
   );
 }
 
-// SUMMARY CARD
-function SummaryCard({
-  title,
-  value,
-  unit,
-  icon,
-  color,
-}) {
-  return (
-    <div
-      style={{
-        ...styles.summaryCard,
-
-        border: `1px solid ${color}`,
-
-        boxShadow: `0 0 15px ${color}`,
-      }}
-    >
-      <div
-        style={{
-          fontSize: "35px",
-
-          color,
-
-          marginBottom: "15px",
-        }}
-      >
-        {icon}
-      </div>
-
-      <h3
-        style={{
-          color: "#cbd5e1",
-        }}
-      >
-        {title}
-      </h3>
-
-      <h1
-        style={{
-          color,
-
-          fontSize: "32px",
-        }}
-      >
-        {value} {unit}
-      </h1>
-    </div>
-  );
-}
-
 const styles = {
   container: {
     minHeight: "100vh",
-
-    padding: "35px",
-
-    marginLeft: "80px",
-
+    padding: "30px",
+    paddingLeft: "90px",
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
-
     color: "white",
   },
 
   header: {
     display: "flex",
-
-    justifyContent:
-      "space-between",
-
     alignItems: "center",
-
+    gap: "15px",
     marginBottom: "35px",
   },
 
   title: {
-    fontSize: "40px",
-
-    marginBottom: "10px",
+    fontSize: "36px",
+    margin: 0,
   },
 
-  subtitle: {
-    color: "#cbd5e1",
-
-    fontSize: "18px",
-  },
-
-  liveBadge: {
-    background: "#16a34a",
-
-    padding: "12px 20px",
-
-    borderRadius: "30px",
-
-    fontWeight: "bold",
-
-    boxShadow:
-      "0 0 15px #16a34a",
-  },
-
-  summaryGrid: {
-    display: "grid",
-
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(220px, 1fr))",
-
-    gap: "25px",
-
-    marginBottom: "35px",
-  },
-
-  summaryCard: {
+  card: {
     background:
       "rgba(255,255,255,0.08)",
 
@@ -432,30 +223,36 @@ const styles = {
 
     borderRadius: "20px",
 
-    backdropFilter: "blur(10px)",
-
-    transition: "0.3s",
-  },
-
-  card: {
-    background:
-      "rgba(255,255,255,0.08)",
-
-    padding: "35px",
-
-    borderRadius: "20px",
-
     marginBottom: "35px",
 
     backdropFilter: "blur(10px)",
 
     boxShadow:
-      "0 0 15px rgba(0,255,255,0.2)",
+      "0 0 20px rgba(0,255,255,0.2)",
   },
 
-  chartTitle: {
+  cardHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
     marginBottom: "20px",
+  },
 
+  iconBox: {
+    width: "45px",
+    height: "45px",
+    borderRadius: "12px",
+    background: "cyan",
+    color: "#0f172a",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "20px",
+    boxShadow: "0 0 15px cyan",
+  },
+
+  cardTitle: {
+    margin: 0,
     fontSize: "24px",
   },
 };
