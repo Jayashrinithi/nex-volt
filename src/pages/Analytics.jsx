@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "../services/firebase";
-
+import { ReferenceLine } from "recharts";
 import {
   ResponsiveContainer,
   LineChart,
@@ -22,6 +22,7 @@ import {
 
 function Analytics() {
   const [history, setHistory] = useState([]);
+  const [chartKey, setChartKey] = useState(0);
 
   useEffect(() => {
     const historyRef = ref(db, "history");
@@ -41,7 +42,12 @@ function Analytics() {
           date: data[key].date || "",
         }));
 
-        setHistory(formattedData.reverse());
+        const sorted = formattedData.reverse();
+
+        setHistory(sorted);
+
+        // force re-animation
+        setChartKey((prev) => prev + 1);
       }
     });
 
@@ -50,117 +56,117 @@ function Analytics() {
 
   return (
     <div style={styles.container}>
-
       {/* TITLE */}
       <div style={styles.header}>
         <FaChartLine size={35} color="cyan" />
-
-        <h1 style={styles.title}>
-          Analytics Dashboard
-        </h1>
+        <h1 style={styles.title}>Analytics Dashboard</h1>
       </div>
 
       {/* VOLTAGE */}
-      <ChartCard
-        title="Voltage Trend (V)"
-        icon={<FaBolt />}
-      >
-        <LineChart data={history}>
+      <ChartCard title="Voltage Trend (V)" icon={<FaBolt />}>
+        <LineChart key={chartKey} data={history}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" stroke="white" />
           <YAxis stroke="white" />
           <Tooltip />
           <Legend />
-
+            {/* 🔴 THRESHOLD LINES */}
+  <ReferenceLine y={250} label="Max" stroke="red" strokeDasharray="3 3" />
+  <ReferenceLine y={180} label="Min" stroke="orange" strokeDasharray="3 3" />
           <Line
             type="monotone"
             dataKey="voltage"
             stroke="#00ffff"
             strokeWidth={3}
+            isAnimationActive={true}
+            animationDuration={800}
+            dot={false}
           />
         </LineChart>
       </ChartCard>
 
       {/* CURRENT */}
-      <ChartCard
-        title="Current Trend (A)"
-        icon={<FaBolt />}
-      >
-        <LineChart data={history}>
+      <ChartCard title="Current Trend (A)" icon={<FaBolt />}>
+        <LineChart key={chartKey} data={history}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" stroke="white" />
           <YAxis stroke="white" />
           <Tooltip />
           <Legend />
-
+          <ReferenceLine y={10} label="Max" stroke="red" strokeDasharray="3 3" />
+<ReferenceLine y={1} label="Min" stroke="green" strokeDasharray="3 3" />
           <Line
             type="monotone"
             dataKey="current"
             stroke="#22c55e"
             strokeWidth={3}
+            isAnimationActive={true}
+            animationDuration={800}
+            dot={false}
           />
         </LineChart>
       </ChartCard>
 
       {/* POWER */}
-      <ChartCard
-        title="Power Trend (W)"
-        icon={<FaBatteryHalf />}
-      >
-        <LineChart data={history}>
+      <ChartCard title="Power Trend (W)" icon={<FaBatteryHalf />}>
+        <LineChart key={chartKey} data={history}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" stroke="white" />
           <YAxis stroke="white" />
           <Tooltip />
           <Legend />
-
+<ReferenceLine y={3000} label="Max" stroke="red" strokeDasharray="3 3" />
           <Line
             type="monotone"
             dataKey="power"
             stroke="#f59e0b"
             strokeWidth={3}
+            isAnimationActive={true}
+            animationDuration={800}
+            dot={false}
           />
         </LineChart>
       </ChartCard>
 
       {/* ENERGY */}
-      <ChartCard
-        title="Energy Trend (kWh)"
-        icon={<FaBatteryHalf />}
-      >
-        <LineChart data={history}>
+      <ChartCard title="Energy Trend (kWh)" icon={<FaBatteryHalf />}>
+        <LineChart key={chartKey} data={history}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" stroke="white" />
           <YAxis stroke="white" />
           <Tooltip />
           <Legend />
-
+<ReferenceLine y={50} label="Max" stroke="red" strokeDasharray="3 3" />
           <Line
             type="monotone"
             dataKey="energy"
             stroke="#a855f7"
             strokeWidth={3}
+            isAnimationActive={true}
+            animationDuration={800}
+            dot={false}
           />
         </LineChart>
       </ChartCard>
 
       {/* WATER FLOW */}
-      <ChartCard
-        title="Water Flow Trend (L/min)"
-        icon={<FaWater />}
-      >
-        <LineChart data={history}>
+      <ChartCard title="Water Flow Trend (L/min)" icon={<FaWater />}>
+        <LineChart key={chartKey} data={history}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" stroke="white" />
           <YAxis stroke="white" />
           <Tooltip />
           <Legend />
-
+<ReferenceLine y={20} label="Max" stroke="red" strokeDasharray="3 3" />
+<ReferenceLine y={1} label="Min" stroke="blue" strokeDasharray="3 3" />
           <Line
             type="monotone"
             dataKey="waterFlow"
             stroke="#06b6d4"
             strokeWidth={3}
+            isAnimationActive={true}
+            animationDuration={800}
+            dot={false}
           />
         </LineChart>
       </ChartCard>
@@ -168,25 +174,16 @@ function Analytics() {
   );
 }
 
-/* CHART CARD */
+/* CARD */
 function ChartCard({ title, icon, children }) {
   return (
     <div style={styles.card}>
-
       <div style={styles.cardHeader}>
-        <div style={styles.iconBox}>
-          {icon}
-        </div>
-
-        <h2 style={styles.cardTitle}>
-          {title}
-        </h2>
+        <div style={styles.iconBox}>{icon}</div>
+        <h2 style={styles.cardTitle}>{title}</h2>
       </div>
 
-      <ResponsiveContainer
-        width="100%"
-        height={300}
-      >
+      <ResponsiveContainer width="100%" height={300}>
         {children}
       </ResponsiveContainer>
     </div>
@@ -198,8 +195,7 @@ const styles = {
     minHeight: "100vh",
     padding: "30px",
     paddingLeft: "90px",
-    background:
-      "linear-gradient(to right, #0f172a, #1e293b)",
+    background: "linear-gradient(to right, #0f172a, #1e293b)",
     color: "white",
   },
 
@@ -216,19 +212,12 @@ const styles = {
   },
 
   card: {
-    background:
-      "rgba(255,255,255,0.08)",
-
+    background: "rgba(255,255,255,0.08)",
     padding: "30px",
-
     borderRadius: "20px",
-
     marginBottom: "35px",
-
     backdropFilter: "blur(10px)",
-
-    boxShadow:
-      "0 0 20px rgba(0,255,255,0.2)",
+    boxShadow: "0 0 20px rgba(0,255,255,0.2)",
   },
 
   cardHeader: {

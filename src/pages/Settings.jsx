@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-
+import { useState } from "react";
 import {
   FaMoon,
   FaBell,
@@ -10,47 +9,59 @@ import {
   FaSave,
 } from "react-icons/fa";
 
+/* DEFAULT SETTINGS (IMPORTANT: ALWAYS FULL STRUCTURE) */
+const defaultSettings = {
+  darkMode: true,
+  alertsEnabled: true,
+  soundEnabled: false,
+  notificationEnabled: false,
+  autoRelayCutoff: true,
+
+  voltage: { min: 180, max: 250 },
+  current: { min: 0, max: 10 },
+  power: { max: 3000 },
+  energy: { max: 50 },
+  waterFlow: { min: 1, max: 20 },
+};
+
 function Settings() {
-  const defaultSettings = {
-    darkMode: true,
-    alertsEnabled: true,
-    soundEnabled: false,
-    notificationEnabled: false,
-    autoRelayCutoff: true,
+  /* SAFE LOAD FROM LOCALSTORAGE */
+  const [settings, setSettings] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("settings"));
 
-    voltage: { min: 180, max: 250 },
-    current: { min: 0, max: 10 },
-    power: { max: 3000 },
-    energy: { max: 50 },
-    waterFlow: { min: 1, max: 20 },
-  };
-
-  const [settings, setSettings] = useState(defaultSettings);
-
-  // LOAD
-  useEffect(() => {
-    const saved = localStorage.getItem("settings");
-
-    if (saved) {
-      setSettings(JSON.parse(saved));
+      // merge default + saved (VERY IMPORTANT FIX)
+      return {
+        ...defaultSettings,
+        ...saved,
+        voltage: { ...defaultSettings.voltage, ...(saved?.voltage || {}) },
+        current: { ...defaultSettings.current, ...(saved?.current || {}) },
+        power: { ...defaultSettings.power, ...(saved?.power || {}) },
+        energy: { ...defaultSettings.energy, ...(saved?.energy || {}) },
+        waterFlow: { ...defaultSettings.waterFlow, ...(saved?.waterFlow || {}) },
+      };
+    } catch {
+      return defaultSettings;
     }
-  }, []);
+  });
 
-  // SAVE ALL
+  /* SAVE */
   const saveSettings = () => {
     localStorage.setItem("settings", JSON.stringify(settings));
+    window.dispatchEvent(new Event("storage"));
     alert("✅ Settings Saved");
   };
 
-  // TOGGLE
+  /* TOGGLE */
   const toggle = (key) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setSettings((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      localStorage.setItem("settings", JSON.stringify(updated));
+      return updated;
+    });
   };
 
-  // INPUT UPDATE
+  /* SAFE THRESHOLD UPDATE */
   const updateThreshold = (type, field, value) => {
     setSettings((prev) => ({
       ...prev,
@@ -61,10 +72,9 @@ function Settings() {
     }));
   };
 
-  // CLEAR HISTORY
+  /* CLEAR HISTORY */
   const clearHistory = () => {
-    const ok = window.confirm("Clear all history?");
-    if (ok) {
+    if (window.confirm("Clear all history?")) {
       localStorage.removeItem("history");
       alert("🗑 History Cleared");
     }
@@ -101,17 +111,21 @@ function Settings() {
           onChange={() => toggle("autoRelayCutoff")}
         />
 
-        {/* INPUTS */}
-        <InputRow icon={<FaBolt />} title="Voltage Limit"
-          value={settings.voltage.max}
+        {/* INPUTS (NOW SAFE) */}
+        <InputRow
+          icon={<FaBolt />}
+          title="Voltage Limit"
+          value={settings.voltage?.max}
           unit="V"
           onChange={(e) =>
             updateThreshold("voltage", "max", e.target.value)
           }
         />
 
-        <InputRow icon={<FaPlug />} title="Current Limit"
-          value={settings.current.max}
+        <InputRow
+          icon={<FaPlug />}
+          title="Current Limit"
+          value={settings.current?.max}
           unit="A"
           onChange={(e) =>
             updateThreshold("current", "max", e.target.value)
@@ -131,8 +145,7 @@ function Settings() {
   );
 }
 
-/* ================= COMPONENTS ================= */
-
+/* COMPONENTS */
 function SettingRow({ icon, title, value, onChange }) {
   return (
     <div style={styles.row}>
@@ -170,8 +183,7 @@ function InputRow({ icon, title, value, onChange, unit }) {
   );
 }
 
-/* ================= STYLES ================= */
-
+/* STYLES */
 const styles = {
   container: {
     minHeight: "100vh",

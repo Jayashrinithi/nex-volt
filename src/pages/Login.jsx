@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -16,67 +15,37 @@ import { Auth } from "../auth";
 function Login() {
   const navigate = useNavigate();
 
-  const [isLogin, setIsLogin] =
-    useState(true);
-
-  const [email, setEmail] =
-    useState("");
-
-  const [password, setPassword] =
-    useState("");
-
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = () => {
-
     if (!email || !password) {
       alert("Please fill all fields");
       return;
     }
 
-    // LOGIN
     if (isLogin) {
-
-      const success = Auth.login(
-        email,
-        password,
-        () => {
-          navigate("/dashboard");
-        }
-      );
+      const success = Auth.login(email, password, () => {
+        navigate("/dashboard");
+      });
 
       if (!success) {
-        alert(
-          "Invalid email or password"
-        );
+        alert("Invalid email or password");
       }
-    }
-
-    // SIGNUP
-    else {
-
-      Auth.signup(
-        email,
-        password,
-        () => {
-
-          alert(
-            "Signup Successful"
-          );
-
-          navigate("/dashboard");
-        }
-      );
+    } else {
+      Auth.signup(email, password, () => {
+        alert("Signup Successful");
+        navigate("/dashboard");
+      });
     }
   };
 
   return (
     <div style={styles.container}>
-
-      {/* LOGIN CARD */}
       <div style={styles.card}>
-
+        
         {/* LOGO */}
         <div style={styles.logoBox}>
           <FaBolt />
@@ -84,92 +53,53 @@ function Login() {
 
         {/* TITLE */}
         <h1 style={styles.title}>
-          {isLogin
-            ? "NEX VOLT LOGIN"
-            : "NEX VOLT SIGN UP"}
+          {isLogin ? "NEX VOLT LOGIN" : "NEX VOLT SIGN UP"}
         </h1>
 
         {/* EMAIL */}
         <div style={styles.inputBox}>
-
-          <FaEnvelope
-            style={styles.icon}
-          />
-
+          <FaEnvelope style={styles.icon} />
           <input
             type="email"
             placeholder="Enter Email"
             value={email}
-            onChange={(e) =>
-              setEmail(e.target.value)
-            }
+            onChange={(e) => setEmail(e.target.value)}
             style={styles.input}
           />
         </div>
 
         {/* PASSWORD */}
         <div style={styles.inputBox}>
-
-          <FaLock
-            style={styles.icon}
-          />
+          <FaLock style={styles.icon} />
 
           <input
-            type={
-              showPassword
-                ? "text"
-                : "password"
-            }
+            type={showPassword ? "text" : "password"}
             placeholder="Enter Password"
             value={password}
-            onChange={(e) =>
-              setPassword(e.target.value)
-            }
+            onChange={(e) => setPassword(e.target.value)}
             style={styles.input}
           />
 
           <div
-            onClick={() =>
-              setShowPassword(
-                !showPassword
-              )
-            }
+            onClick={() => setShowPassword(!showPassword)}
             style={styles.eye}
           >
-            {showPassword ? (
-              <FaEyeSlash />
-            ) : (
-              <FaEye />
-            )}
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
           </div>
         </div>
 
         {/* BUTTON */}
-        <button
-          onClick={handleSubmit}
-          style={styles.button}
-        >
+        <button onClick={handleSubmit} style={styles.button}>
           <FaUserShield />
-
-          <span>
-            {isLogin
-              ? "LOGIN"
-              : "SIGN UP"}
-          </span>
+          <span>{isLogin ? "LOGIN" : "SIGN UP"}</span>
         </button>
 
         {/* TOGGLE */}
-        <p
-          onClick={() =>
-            setIsLogin(!isLogin)
-          }
-          style={styles.toggle}
-        >
+        <p onClick={() => setIsLogin(!isLogin)} style={styles.toggle}>
           {isLogin
             ? "Don't have an account? Sign Up"
             : "Already have an account? Login"}
         </p>
-
       </div>
     </div>
   );
@@ -181,8 +111,7 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     minHeight: "100vh",
-    background:
-      "linear-gradient(to right, #0f172a, #1e293b)",
+    background: "linear-gradient(to right, #0f172a, #1e293b)",
     padding: "20px",
   },
 
@@ -191,14 +120,9 @@ const styles = {
     maxWidth: "420px",
     padding: "40px",
     borderRadius: "25px",
-    background:
-      "rgba(255,255,255,0.08)",
-
+    background: "rgba(255,255,255,0.08)",
     backdropFilter: "blur(12px)",
-
-    boxShadow:
-      "0 0 25px rgba(0,255,255,0.3)",
-
+    boxShadow: "0 0 25px rgba(0,255,255,0.3)",
     textAlign: "center",
   },
 
@@ -225,13 +149,9 @@ const styles = {
   inputBox: {
     display: "flex",
     alignItems: "center",
-    background:
-      "rgba(255,255,255,0.1)",
-
+    background: "rgba(255,255,255,0.1)",
     borderRadius: "12px",
-
     marginBottom: "22px",
-
     padding: "0 15px",
   },
 

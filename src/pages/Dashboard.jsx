@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ref, onValue } from "firebase/database";
 import { db } from "../services/firebase";
 
@@ -22,32 +22,100 @@ function Dashboard() {
   });
 
   const [alerts, setAlerts] = useState([]);
+useEffect(() => {
+  if (alerts.length > 0) {
+    const audio = new Audio("/alert.mp3");
+    audio.play();
+  }
+}, [alerts]);
+  // store last alerts to avoid spam
+  const lastAlertsRef = useRef([]);
+const playedRef = useRef(false);
 
+useEffect(() => {
+  if (alerts.length > 0 && !playedRef.current) {
+    const audio = new Audio("/alert.mp3");
+    audio.play();
+    playedRef.current = true;
+  }
+
+  if (alerts.length === 0) {
+    playedRef.current = false;
+  }
+}, [alerts]);
+  // =========================
+  // SOUND FUNCTION
+  // =========================
+  const playSound = () => {
+    const audio = new Audio("/alert.mp3");
+    audio.play().catch(() => {
+      console.log("Sound blocked by browser");
+    });
+  };
+
+  // =========================
+  // POPUP NOTIFICATION
+  // =========================
+  const showPopup = (message) => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      new Notification("⚠ IoT Alert", {
+        body: message,
+        icon: "/logo192.png",
+      });
+    }
+  };
+
+  // ask permission once
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // =========================
+  // FIREBASE DATA
+  // =========================
   useEffect(() => {
     const sensorRef = ref(db, "sensorData");
 
     const unsubscribe = onValue(sensorRef, (snapshot) => {
       const firebaseData = snapshot.val();
 
-      if (firebaseData) {
-        const formattedData = {
-          voltage: Number(firebaseData.voltage || 0),
-          current: Number(firebaseData.current || 0),
-          power: Number(firebaseData.power || 0),
-          energy: Number(firebaseData.energy || 0),
-          waterFlow: Number(
-            firebaseData.waterFlow || 0
-          ),
-        };
+      if (!firebaseData) return;
 
-        setData(formattedData);
+      const formattedData = {
+        voltage: Number(firebaseData.voltage || 0),
+        current: Number(firebaseData.current || 0),
+        power: Number(firebaseData.power || 0),
+        energy: Number(firebaseData.energy || 0),
+        waterFlow: Number(firebaseData.waterFlow || 0),
+      };
 
-        // CHECK ALERTS
-        const activeAlerts =
-          checkAlerts(formattedData);
+      setData(formattedData);
 
-        setAlerts(activeAlerts);
+      const newAlerts = checkAlerts(formattedData);
+      setAlerts(newAlerts);
+
+      // =========================
+      // ALERT TRIGGER LOGIC
+      // =========================
+      const prev = lastAlertsRef.current;
+
+      const isNewAlert =
+        newAlerts.length > 0 &&
+        JSON.stringify(newAlerts) !== JSON.stringify(prev);
+
+      if (isNewAlert) {
+        // SOUND
+        playSound();
+
+        // POPUP
+        newAlerts.forEach((msg) => showPopup(msg));
       }
+
+      lastAlertsRef.current = newAlerts;
     });
 
     return () => unsubscribe();
@@ -55,15 +123,17 @@ function Dashboard() {
 
   return (
     <div style={styles.container}>
+      <h1 style={styles.title}>⚡ NEX VOLT DASHBOARD</h1>
 
-      {/* TITLE */}
-      <h1 style={styles.title}>
-        ⚡ NEX VOLT DASHBOARD
-      </h1>
-
-      {/* ALERT SECTION */}
+      {/* ALERT BOX */}
       {alerts.length > 0 && (
-        <div style={styles.alertBox}>
+        <div
+  style={{
+    ...styles.alertBox,
+    animation: alerts.length > 0 ? "blink 1s infinite" : "none",
+    borderColor: alerts.length > 0 ? "red" : "transparent",
+  }}
+>
           <div style={styles.alertTitle}>
             <FaExclamationTriangle />
             <span>Alerts Detected</span>
@@ -79,99 +149,61 @@ function Dashboard() {
 
       {/* CARDS */}
       <div style={styles.grid}>
-
-        {/* VOLTAGE */}
-        <Card
-          icon={<FaBolt />}
-          title="Voltage"
-          value={`${data.voltage} V`}
-          glow="cyan"
-        />
-
-        {/* CURRENT */}
-        <Card
-          icon={<FaChargingStation />}
-          title="Current"
-          value={`${data.current} A`}
-          glow="#22c55e"
-        />
-
-        {/* POWER */}
-        <Card
-          icon={<FaBolt />}
-          title="Power"
-          value={`${data.power} W`}
-          glow="#f59e0b"
-        />
-
-        {/* ENERGY */}
-        <Card
-          icon={<FaBatteryHalf />}
-          title="Energy"
-          value={`${data.energy} kWh`}
-          glow="#a855f7"
-        />
-
-        {/* WATER FLOW */}
-        <Card
-          icon={<FaWater />}
-          title="Water Flow"
-          value={`${data.waterFlow} L/min`}
-          glow="#06b6d4"
-        />
+        <Card icon={<FaBolt />} title="Voltage" value={`${data.voltage} V`} glow="cyan" />
+        <Card icon={<FaChargingStation />} title="Current" value={`${data.current} A`} glow="#22c55e" />
+        <Card icon={<FaBolt />} title="Power" value={`${data.power} W`} glow="#f59e0b" />
+        <Card icon={<FaBatteryHalf />} title="Energy" value={`${data.energy} kWh`} glow="#a855f7" />
+        <Card icon={<FaWater />} title="Water Flow" value={`${data.waterFlow} L/min`} glow="#06b6d4" />
       </div>
     </div>
   );
 }
 
-/* CARD COMPONENT */
-function Card({
-  icon,
-  title,
-  value,
-  glow,
-}) {
+/* ================= CARD ================= */
+
+function Card({ icon, title, value, glow }) {
+  const isDanger =
+    title === "Voltage" && Number(value) > 250;
+
   return (
     <div
       style={{
         ...styles.card,
-        boxShadow: `0 0 20px ${glow}`,
+        boxShadow: isDanger
+          ? "0 0 25px red"
+          : `0 0 20px ${glow}`,
+        animation: isDanger ? "blink 1s infinite" : "none",
+        border: isDanger ? "2px solid red" : "none",
       }}
     >
       <div
         style={{
           ...styles.iconBox,
-          background: glow,
+          background: isDanger ? "red" : glow,
         }}
       >
         {icon}
       </div>
 
-      <h2 style={styles.cardTitle}>
-        {title}
-      </h2>
+      <h2 style={styles.cardTitle}>{title}</h2>
 
-      <h1 style={styles.cardValue}>
-        {value}
-      </h1>
+      <h1 style={styles.cardValue}>{value}</h1>
     </div>
   );
 }
+
+/* ================= STYLES ================= */
 
 const styles = {
   container: {
     minHeight: "100vh",
     padding: "30px",
     paddingLeft: "90px",
-    background:
-      "linear-gradient(to right, #0f172a, #1e293b)",
+    background: "linear-gradient(to right, #0f172a, #1e293b)",
     color: "white",
   },
 
-  title: {
-    fontSize: "38px",
-    marginBottom: "30px",
-  },
+  title: { fontSize: "38px", marginBottom: "30px" },
 
   alertBox: {
     background: "rgba(255,0,0,0.15)",
@@ -199,22 +231,15 @@ const styles = {
 
   grid: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit, minmax(250px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
     gap: "25px",
   },
 
   card: {
-    background:
-      "rgba(255,255,255,0.08)",
-
+    background: "rgba(255,255,255,0.08)",
     padding: "30px",
-
     borderRadius: "20px",
-
     backdropFilter: "blur(10px)",
-
-    transition: "0.3s",
   },
 
   iconBox: {
@@ -229,18 +254,8 @@ const styles = {
     marginBottom: "20px",
   },
 
-  cardTitle: {
-    margin: 0,
-    marginBottom: "15px",
-    fontSize: "22px",
-    color: "#cbd5e1",
-  },
-
-  cardValue: {
-    margin: 0,
-    fontSize: "36px",
-    fontWeight: "bold",
-  },
+  cardTitle: { color: "#cbd5e1", marginBottom: "15px" },
+  cardValue: { fontSize: "36px", fontWeight: "bold" },
 };
 
 export default Dashboard;
