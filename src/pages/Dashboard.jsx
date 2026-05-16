@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-
 import {
   ref,
   onValue,
@@ -7,15 +6,8 @@ import {
   set,
 } from "firebase/database";
 
-import {
-  FaBolt,
-  FaPlug,
-  FaTint,
-  FaChartLine,
-  FaPowerOff,
-} from "react-icons/fa";
-
 import { db } from "../services/firebase";
+
 import { checkAlerts } from "../utils/checkAlerts";
 
 function Dashboard() {
@@ -28,24 +20,6 @@ function Dashboard() {
   });
 
   const [alerts, setAlerts] = useState([]);
-
-  const [time, setTime] = useState(
-    new Date()
-  );
-
-  const [relay, setRelayState] =
-    useState("OFF");
-
-  const [loading, setLoading] =
-    useState(true);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const liveDataRef = ref(db, "liveData");
@@ -60,25 +34,24 @@ function Dashboard() {
         if (firebaseData) {
           const safeData = {
             voltage:
-              firebaseData.voltage ?? 0,
+              Number(firebaseData.voltage) || 0,
 
             current:
-              firebaseData.current ?? 0,
+              Number(firebaseData.current) || 0,
 
             power:
-              firebaseData.power ?? 0,
+              Number(firebaseData.power) || 0,
 
             energy:
-              firebaseData.energy ?? 0,
+              Number(firebaseData.energy) || 0,
 
             waterFlow:
-              firebaseData.waterFlow ?? 0,
+              Number(firebaseData.waterFlow) || 0,
           };
 
           setData(safeData);
 
-          setLoading(false);
-
+          // SAVE HISTORY
           const newHistoryRef =
             push(historyRef);
 
@@ -92,14 +65,11 @@ function Dashboard() {
             ...safeData,
           });
 
+          // CHECK ALERTS
           const detectedAlerts =
             checkAlerts(safeData);
 
           setAlerts(detectedAlerts);
-
-          if (safeData.voltage > 250) {
-            relayControl("OFF");
-          }
         }
       }
     );
@@ -107,82 +77,45 @@ function Dashboard() {
     return () => unsubscribe();
   }, []);
 
-  const relayControl = (state) => {
-    setRelayState(state);
-
-    set(ref(db, "relay"), {
-      status: state,
-    });
-  };
-
-  const getVoltageStatus = () => {
-    if (data.voltage > 250)
-      return "🔴 HIGH";
-
-    if (data.voltage < 180)
-      return "🟡 LOW";
-
-    return "🟢 NORMAL";
-  };
-
-  const energyCost = (
-    data.energy * 8
-  ).toFixed(2);
-
-  if (loading) {
-    return (
-      <div style={styles.loading}>
-        Loading Data...
-      </div>
-    );
-  }
-
   return (
     <div style={styles.container}>
+      {/* HEADER */}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>
-            SMART IOT MULTIMETER
+            ⚡ NEX VOLT MONITOR
           </h1>
 
           <p style={styles.subtitle}>
-            Industrial Energy Monitoring
-            System
+            Smart IoT Multimeter System
           </p>
         </div>
 
-        <div>
-          <div style={styles.liveBadge}>
-            🟢 LIVE
-          </div>
-
-          <p style={styles.clock}>
-            {time.toLocaleString()}
-          </p>
+        <div style={styles.liveBadge}>
+          🟢 LIVE
         </div>
       </div>
 
-      <div style={styles.statusBox}>
-        Voltage Status:
-        {getVoltageStatus()}
-      </div>
-
+      {/* ALERTS */}
       {alerts.length > 0 && (
         <div style={styles.alertBox}>
           <h2>⚠ Active Alerts</h2>
 
           {alerts.map((alert, index) => (
-            <p key={index}>{alert}</p>
+            <p key={index}>
+              {String(alert)}
+            </p>
           ))}
         </div>
       )}
 
+      {/* SENSOR CARDS */}
       <div style={styles.grid}>
         <Card
           title="Voltage"
           value={data.voltage}
           unit="V"
-          icon={<FaBolt />}
+          icon="⚡"
           color="#3b82f6"
         />
 
@@ -190,7 +123,7 @@ function Dashboard() {
           title="Current"
           value={data.current}
           unit="A"
-          icon={<FaPlug />}
+          icon="🔌"
           color="#22c55e"
         />
 
@@ -198,7 +131,7 @@ function Dashboard() {
           title="Power"
           value={data.power}
           unit="W"
-          icon={<FaPowerOff />}
+          icon="💡"
           color="#f59e0b"
         />
 
@@ -206,7 +139,7 @@ function Dashboard() {
           title="Energy"
           value={data.energy}
           unit="kWh"
-          icon={<FaChartLine />}
+          icon="📊"
           color="#a855f7"
         />
 
@@ -214,40 +147,9 @@ function Dashboard() {
           title="Water Flow"
           value={data.waterFlow}
           unit="L/min"
-          icon={<FaTint />}
+          icon="💧"
           color="#06b6d4"
         />
-
-        <Card
-          title="Energy Cost"
-          value={energyCost}
-          unit="₹"
-          icon="💰"
-          color="#14b8a6"
-        />
-      </div>
-
-      <div style={styles.relayBox}>
-        <h2>Relay Control</h2>
-
-        <p>
-          Current State:
-          {relay}
-        </p>
-
-        <button
-          style={styles.onButton}
-          onClick={() => relayControl("ON")}
-        >
-          TURN ON
-        </button>
-
-        <button
-          style={styles.offButton}
-          onClick={() => relayControl("OFF")}
-        >
-          TURN OFF
-        </button>
       </div>
     </div>
   );
@@ -272,20 +174,15 @@ function Card({
 
         backdropFilter: "blur(10px)",
 
-        boxShadow: `0 0 15px ${color}`,
-
         border: `1px solid ${color}`,
 
-        transition: "0.3s",
+        boxShadow: `0 0 15px ${color}`,
       }}
     >
       <div
         style={{
           fontSize: "40px",
-
           marginBottom: "15px",
-
-          color,
         }}
       >
         {icon}
@@ -294,7 +191,6 @@ function Card({
       <h3
         style={{
           color: "#cbd5e1",
-
           marginBottom: "10px",
         }}
       >
@@ -303,12 +199,11 @@ function Card({
 
       <h1
         style={{
-          fontSize: "38px",
-
+          fontSize: "36px",
           color,
         }}
       >
-        {value} {unit}
+        {Number(value).toFixed(2)} {unit}
       </h1>
     </div>
   );
@@ -320,26 +215,8 @@ const styles = {
 
     padding: "40px",
 
-    marginLeft: "80px",
-
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
-
-    color: "white",
-  },
-
-  loading: {
-    height: "100vh",
-
-    display: "flex",
-
-    justifyContent: "center",
-
-    alignItems: "center",
-
-    fontSize: "30px",
-
-    background: "#020617",
 
     color: "white",
   },
@@ -362,24 +239,6 @@ const styles = {
 
   subtitle: {
     color: "#cbd5e1",
-
-    fontSize: "18px",
-  },
-
-  clock: {
-    marginTop: "10px",
-
-    fontSize: "16px",
-  },
-
-  statusBox: {
-    background: "#111827",
-
-    padding: "15px",
-
-    borderRadius: "15px",
-
-    marginBottom: "20px",
 
     fontSize: "18px",
   },
@@ -418,47 +277,6 @@ const styles = {
       "repeat(auto-fit, minmax(240px, 1fr))",
 
     gap: "25px",
-  },
-
-  relayBox: {
-    marginTop: "40px",
-
-    background:
-      "rgba(255,255,255,0.08)",
-
-    padding: "30px",
-
-    borderRadius: "20px",
-  },
-
-  onButton: {
-    padding: "15px 25px",
-
-    marginRight: "20px",
-
-    background: "#22c55e",
-
-    border: "none",
-
-    borderRadius: "10px",
-
-    color: "white",
-
-    cursor: "pointer",
-  },
-
-  offButton: {
-    padding: "15px 25px",
-
-    background: "#ef4444",
-
-    border: "none",
-
-    borderRadius: "10px",
-
-    color: "white",
-
-    cursor: "pointer",
   },
 };
 
