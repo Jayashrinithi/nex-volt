@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 
+import {
+  FaMoon,
+  FaBell,
+  FaVolumeUp,
+  FaBolt,
+  FaPlug,
+  FaTrash,
+  FaSave,
+} from "react-icons/fa";
+
 function Settings() {
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] =
+    useState(true);
 
   const [alertsEnabled, setAlertsEnabled] =
     useState(true);
@@ -15,8 +26,11 @@ function Settings() {
   const [currentMax, setCurrentMax] =
     useState(10);
 
-  const [waterLevelMin, setWaterLevelMin] =
-    useState(20);
+  const [autoRelayCutoff, setAutoRelayCutoff] =
+    useState(true);
+
+  const [notificationEnabled, setNotificationEnabled] =
+    useState(false);
 
   // LOAD SAVED SETTINGS
   useEffect(() => {
@@ -35,11 +49,18 @@ function Settings() {
     const savedCurrent =
       localStorage.getItem("currentMax");
 
-    const savedWaterLevel =
-      localStorage.getItem("waterLevelMin");
+    const savedRelay =
+      localStorage.getItem("autoRelayCutoff");
+
+    const savedNotification =
+      localStorage.getItem(
+        "notificationEnabled"
+      );
 
     if (savedDarkMode !== null) {
-      setDarkMode(JSON.parse(savedDarkMode));
+      setDarkMode(
+        JSON.parse(savedDarkMode)
+      );
     }
 
     if (savedAlerts !== null) {
@@ -62,8 +83,16 @@ function Settings() {
       setCurrentMax(savedCurrent);
     }
 
-    if (savedWaterLevel !== null) {
-      setWaterLevelMin(savedWaterLevel);
+    if (savedRelay !== null) {
+      setAutoRelayCutoff(
+        JSON.parse(savedRelay)
+      );
+    }
+
+    if (savedNotification !== null) {
+      setNotificationEnabled(
+        JSON.parse(savedNotification)
+      );
     }
   }, []);
 
@@ -95,11 +124,16 @@ function Settings() {
     );
 
     localStorage.setItem(
-      "waterLevelMin",
-      waterLevelMin
+      "autoRelayCutoff",
+      JSON.stringify(autoRelayCutoff)
     );
 
-    alert("Settings Saved ✅");
+    localStorage.setItem(
+      "notificationEnabled",
+      JSON.stringify(notificationEnabled)
+    );
+
+    alert("✅ Settings Saved");
   };
 
   // CLEAR HISTORY
@@ -111,7 +145,7 @@ function Settings() {
     if (confirmDelete) {
       localStorage.clear();
 
-      alert("History Cleared");
+      alert("🗑 History Cleared");
     }
   };
 
@@ -122,23 +156,21 @@ function Settings() {
 
         padding: "40px",
 
+        marginLeft: "80px",
+
         background: darkMode
           ? "linear-gradient(to right, #0f172a, #1e293b)"
           : "#f1f5f9",
 
-        color: darkMode ? "white" : "black",
+        color: darkMode
+          ? "white"
+          : "black",
 
         transition: "0.3s",
       }}
     >
-      <h1
-        style={{
-          fontSize: "40px",
-
-          marginBottom: "30px",
-        }}
-      >
-        ⚙ Settings
+      <h1 style={styles.title}>
+        ⚙ Smart IoT Settings
       </h1>
 
       {/* SETTINGS CARD */}
@@ -146,6 +178,7 @@ function Settings() {
         
         {/* DARK MODE */}
         <SettingRow
+          icon={<FaMoon />}
           title="Dark Mode"
           value={darkMode}
           onChange={() =>
@@ -155,6 +188,7 @@ function Settings() {
 
         {/* ALERTS */}
         <SettingRow
+          icon={<FaBell />}
           title="Enable Alerts"
           value={alertsEnabled}
           onChange={() =>
@@ -166,6 +200,7 @@ function Settings() {
 
         {/* SOUND */}
         <SettingRow
+          icon={<FaVolumeUp />}
           title="Sound Alarm"
           value={soundEnabled}
           onChange={() =>
@@ -175,30 +210,51 @@ function Settings() {
           }
         />
 
+        {/* RELAY */}
+        <SettingRow
+          icon={"🔌"}
+          title="Auto Relay Cutoff"
+          value={autoRelayCutoff}
+          onChange={() =>
+            setAutoRelayCutoff(
+              !autoRelayCutoff
+            )
+          }
+        />
+
+        {/* NOTIFICATIONS */}
+        <SettingRow
+          icon={"📱"}
+          title="Push Notifications"
+          value={notificationEnabled}
+          onChange={() =>
+            setNotificationEnabled(
+              !notificationEnabled
+            )
+          }
+        />
+
         {/* VOLTAGE */}
         <InputRow
-          title="Voltage Max"
+          icon={<FaBolt />}
+          title="Voltage Limit"
           value={voltageMax}
+          unit="V"
           onChange={(e) =>
-            setVoltageMax(e.target.value)
+            setVoltageMax(
+              e.target.value
+            )
           }
         />
 
         {/* CURRENT */}
         <InputRow
-          title="Current Max"
+          icon={<FaPlug />}
+          title="Current Limit"
           value={currentMax}
+          unit="A"
           onChange={(e) =>
-            setCurrentMax(e.target.value)
-          }
-        />
-
-        {/* WATER LEVEL */}
-        <InputRow
-          title="Water Level Min"
-          value={waterLevelMin}
-          onChange={(e) =>
-            setWaterLevelMin(
+            setCurrentMax(
               e.target.value
             )
           }
@@ -209,7 +265,12 @@ function Settings() {
           onClick={saveSettings}
           style={styles.saveButton}
         >
-          💾 Save Settings
+          <FaSave
+            style={{
+              marginRight: "10px",
+            }}
+          />
+          Save Settings
         </button>
 
         {/* CLEAR HISTORY */}
@@ -217,7 +278,12 @@ function Settings() {
           onClick={clearHistory}
           style={styles.deleteButton}
         >
-          🗑 Clear History
+          <FaTrash
+            style={{
+              marginRight: "10px",
+            }}
+          />
+          Clear History
         </button>
       </div>
     </div>
@@ -226,13 +292,26 @@ function Settings() {
 
 // TOGGLE ROW
 function SettingRow({
+  icon,
   title,
   value,
   onChange,
 }) {
   return (
     <div style={styles.row}>
-      <h3>{title}</h3>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
+        <span style={{ fontSize: "20px" }}>
+          {icon}
+        </span>
+
+        <h3>{title}</h3>
+      </div>
 
       <button
         onClick={onChange}
@@ -252,38 +331,70 @@ function SettingRow({
 
 // INPUT ROW
 function InputRow({
+  icon,
   title,
   value,
   onChange,
+  unit,
 }) {
   return (
     <div style={styles.row}>
-      <h3>{title}</h3>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+        }}
+      >
+        <span style={{ fontSize: "20px" }}>
+          {icon}
+        </span>
 
-      <input
-        value={value}
-        onChange={onChange}
-        style={styles.input}
-      />
+        <h3>{title}</h3>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        <input
+          value={value}
+          onChange={onChange}
+          style={styles.input}
+        />
+
+        <span>{unit}</span>
+      </div>
     </div>
   );
 }
 
 const styles = {
+  title: {
+    fontSize: "42px",
+
+    marginBottom: "30px",
+
+    fontWeight: "bold",
+  },
+
   card: {
     background:
       "rgba(255,255,255,0.08)",
 
-    padding: "30px",
+    padding: "35px",
 
     borderRadius: "20px",
 
-    maxWidth: "600px",
+    maxWidth: "700px",
 
     backdropFilter: "blur(10px)",
 
     boxShadow:
-      "0 0 20px rgba(0,255,255,0.2)",
+      "0 0 25px rgba(0,255,255,0.2)",
   },
 
   row: {
@@ -294,13 +405,18 @@ const styles = {
 
     alignItems: "center",
 
-    marginBottom: "25px",
+    marginBottom: "28px",
+
+    borderBottom:
+      "1px solid rgba(255,255,255,0.08)",
+
+    paddingBottom: "15px",
   },
 
   toggle: {
     border: "none",
 
-    padding: "10px 20px",
+    padding: "10px 24px",
 
     borderRadius: "10px",
 
@@ -309,6 +425,8 @@ const styles = {
     fontWeight: "bold",
 
     cursor: "pointer",
+
+    minWidth: "80px",
   },
 
   input: {
@@ -321,12 +439,14 @@ const styles = {
     width: "120px",
 
     textAlign: "center",
+
+    fontSize: "16px",
   },
 
   saveButton: {
     width: "100%",
 
-    padding: "15px",
+    padding: "16px",
 
     background: "#06b6d4",
 
@@ -343,12 +463,15 @@ const styles = {
     cursor: "pointer",
 
     marginBottom: "15px",
+
+    boxShadow:
+      "0 0 15px rgba(6,182,212,0.5)",
   },
 
   deleteButton: {
     width: "100%",
 
-    padding: "15px",
+    padding: "16px",
 
     background: "#ef4444",
 
@@ -363,6 +486,9 @@ const styles = {
     fontWeight: "bold",
 
     cursor: "pointer",
+
+    boxShadow:
+      "0 0 15px rgba(239,68,68,0.5)",
   },
 };
 

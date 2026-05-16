@@ -1,7 +1,15 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+
 import { useState } from "react";
 
 import Sidebar from "./components/Sidebar";
+
 import PrivateRoute from "./PrivateRoute";
 
 import Dashboard from "./pages/Dashboard";
@@ -12,33 +20,64 @@ import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 
 function Layout() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] =
+    useState(false);
+
   const location = useLocation();
 
-  const hideSidebar = location.pathname === "/";
+  // HIDE SIDEBAR IN LOGIN PAGE
+  const hideSidebar =
+    location.pathname === "/";
 
   return (
-    <div style={{ display: "flex" }}>
-      
+    <div
+      style={{
+        display: "flex",
+
+        background: "#020617",
+
+        minHeight: "100vh",
+
+        overflowX: "hidden",
+      }}
+    >
       {/* SIDEBAR */}
       {!hideSidebar && (
-        <Sidebar open={open} setOpen={setOpen} />
+        <Sidebar
+          open={open}
+          setOpen={setOpen}
+        />
       )}
 
       {/* MAIN CONTENT */}
       <div
         style={{
           flex: 1,
+
           width: "100%",
-          marginLeft: hideSidebar ? "0px" : open ? "240px" : "70px",
-          transition: "0.3s ease",
+
+          marginLeft: hideSidebar
+            ? "0px"
+            : open
+            ? "240px"
+            : "80px",
+
+          transition:
+            "all 0.3s ease",
+
           minHeight: "100vh",
+
           overflowX: "hidden",
         }}
       >
         <Routes>
-          <Route path="/" element={<Login />} />
+          {/* LOGIN PAGE */}
+          <Route
+            path="/"
+            element={<Login />}
+          />
 
+          {/* DASHBOARD */}
           <Route
             path="/dashboard"
             element={
@@ -48,6 +87,7 @@ function Layout() {
             }
           />
 
+          {/* ANALYTICS */}
           <Route
             path="/analytics"
             element={
@@ -57,6 +97,7 @@ function Layout() {
             }
           />
 
+          {/* HISTORY */}
           <Route
             path="/history"
             element={
@@ -66,6 +107,7 @@ function Layout() {
             }
           />
 
+          {/* REPORTS */}
           <Route
             path="/reports"
             element={
@@ -75,6 +117,7 @@ function Layout() {
             }
           />
 
+          {/* SETTINGS */}
           <Route
             path="/settings"
             element={
@@ -83,9 +126,16 @@ function Layout() {
               </PrivateRoute>
             }
           />
+
+          {/* UNKNOWN ROUTES */}
+          <Route
+            path="*"
+            element={
+              <Navigate to="/" />
+            }
+          />
         </Routes>
       </div>
-
     </div>
   );
 }

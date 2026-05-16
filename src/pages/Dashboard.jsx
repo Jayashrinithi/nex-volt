@@ -7,8 +7,15 @@ import {
   set,
 } from "firebase/database";
 
-import { db } from "../services/firebase";
+import {
+  FaBolt,
+  FaPlug,
+  FaTint,
+  FaChartLine,
+  FaPowerOff,
+} from "react-icons/fa";
 
+import { db } from "../services/firebase";
 import { checkAlerts } from "../utils/checkAlerts";
 
 function Dashboard() {
@@ -18,10 +25,27 @@ function Dashboard() {
     power: 0,
     energy: 0,
     waterFlow: 0,
-    waterLevel: 0,
   });
 
   const [alerts, setAlerts] = useState([]);
+
+  const [time, setTime] = useState(
+    new Date()
+  );
+
+  const [relay, setRelayState] =
+    useState("OFF");
+
+  const [loading, setLoading] =
+    useState(true);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const liveDataRef = ref(db, "liveData");
@@ -49,54 +73,32 @@ function Dashboard() {
 
             waterFlow:
               firebaseData.waterFlow ?? 0,
-
-            waterLevel:
-              firebaseData.waterLevel ?? 0,
           };
 
           setData(safeData);
 
-          // ✅ SAVE SENSOR HISTORY
+          setLoading(false);
+
           const newHistoryRef =
             push(historyRef);
 
           set(newHistoryRef, {
-            date: new Date().toLocaleDateString(),
+            date:
+              new Date().toLocaleDateString(),
 
-            time: new Date().toLocaleTimeString(),
+            time:
+              new Date().toLocaleTimeString(),
 
             ...safeData,
           });
 
-          // ✅ CHECK ALERTS
           const detectedAlerts =
             checkAlerts(safeData);
 
           setAlerts(detectedAlerts);
 
-          // ✅ SAVE ALERT HISTORY
-          if (detectedAlerts.length > 0) {
-            detectedAlerts.forEach((msg) => {
-              const alertRef = ref(
-                db,
-                "alertHistory"
-              );
-
-              const newAlertRef =
-                push(alertRef);
-
-              set(newAlertRef, {
-                message: msg,
-
-                date:
-                  new Date().toLocaleDateString(),
-
-                time:
-                  new Date().toLocaleTimeString(),
-
-                timestamp: Date.now(),
-              });
-            });
+          if (safeData.voltage > 250) {
+            relayControl("OFF");
           }
         }
       }
@@ -105,26 +107,66 @@ function Dashboard() {
     return () => unsubscribe();
   }, []);
 
+  const relayControl = (state) => {
+    setRelayState(state);
+
+    set(ref(db, "relay"), {
+      status: state,
+    });
+  };
+
+  const getVoltageStatus = () => {
+    if (data.voltage > 250)
+      return "🔴 HIGH";
+
+    if (data.voltage < 180)
+      return "🟡 LOW";
+
+    return "🟢 NORMAL";
+  };
+
+  const energyCost = (
+    data.energy * 8
+  ).toFixed(2);
+
+  if (loading) {
+    return (
+      <div style={styles.loading}>
+        Loading Data...
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
-      {/* HEADER */}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>
-            NEX VOLT MONITOR
+            SMART IOT MULTIMETER
           </h1>
 
           <p style={styles.subtitle}>
-            Smart IoT Monitoring System
+            Industrial Energy Monitoring
+            System
           </p>
         </div>
 
-        <div style={styles.liveBadge}>
-          🟢 LIVE
+        <div>
+          <div style={styles.liveBadge}>
+            🟢 LIVE
+          </div>
+
+          <p style={styles.clock}>
+            {time.toLocaleString()}
+          </p>
         </div>
       </div>
 
-      {/* ALERTS */}
+      <div style={styles.statusBox}>
+        Voltage Status:
+        {getVoltageStatus()}
+      </div>
+
       {alerts.length > 0 && (
         <div style={styles.alertBox}>
           <h2>⚠ Active Alerts</h2>
@@ -135,13 +177,12 @@ function Dashboard() {
         </div>
       )}
 
-      {/* SENSOR CARDS */}
       <div style={styles.grid}>
         <Card
           title="Voltage"
           value={data.voltage}
           unit="V"
-          icon="⚡"
+          icon={<FaBolt />}
           color="#3b82f6"
         />
 
@@ -149,7 +190,7 @@ function Dashboard() {
           title="Current"
           value={data.current}
           unit="A"
-          icon="🔌"
+          icon={<FaPlug />}
           color="#22c55e"
         />
 
@@ -157,7 +198,7 @@ function Dashboard() {
           title="Power"
           value={data.power}
           unit="W"
-          icon="💡"
+          icon={<FaPowerOff />}
           color="#f59e0b"
         />
 
@@ -165,7 +206,7 @@ function Dashboard() {
           title="Energy"
           value={data.energy}
           unit="kWh"
-          icon="📊"
+          icon={<FaChartLine />}
           color="#a855f7"
         />
 
@@ -173,17 +214,40 @@ function Dashboard() {
           title="Water Flow"
           value={data.waterFlow}
           unit="L/min"
-          icon="💧"
+          icon={<FaTint />}
           color="#06b6d4"
         />
 
         <Card
-          title="Water Level"
-          value={data.waterLevel}
-          unit="%"
-          icon="🟦"
-          color="#0ea5e9"
+          title="Energy Cost"
+          value={energyCost}
+          unit="₹"
+          icon="💰"
+          color="#14b8a6"
         />
+      </div>
+
+      <div style={styles.relayBox}>
+        <h2>Relay Control</h2>
+
+        <p>
+          Current State:
+          {relay}
+        </p>
+
+        <button
+          style={styles.onButton}
+          onClick={() => relayControl("ON")}
+        >
+          TURN ON
+        </button>
+
+        <button
+          style={styles.offButton}
+          onClick={() => relayControl("OFF")}
+        >
+          TURN OFF
+        </button>
       </div>
     </div>
   );
@@ -220,6 +284,8 @@ function Card({
           fontSize: "40px",
 
           marginBottom: "15px",
+
+          color,
         }}
       >
         {icon}
@@ -254,8 +320,26 @@ const styles = {
 
     padding: "40px",
 
+    marginLeft: "80px",
+
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
+
+    color: "white",
+  },
+
+  loading: {
+    height: "100vh",
+
+    display: "flex",
+
+    justifyContent: "center",
+
+    alignItems: "center",
+
+    fontSize: "30px",
+
+    background: "#020617",
 
     color: "white",
   },
@@ -278,6 +362,24 @@ const styles = {
 
   subtitle: {
     color: "#cbd5e1",
+
+    fontSize: "18px",
+  },
+
+  clock: {
+    marginTop: "10px",
+
+    fontSize: "16px",
+  },
+
+  statusBox: {
+    background: "#111827",
+
+    padding: "15px",
+
+    borderRadius: "15px",
+
+    marginBottom: "20px",
 
     fontSize: "18px",
   },
@@ -316,6 +418,47 @@ const styles = {
       "repeat(auto-fit, minmax(240px, 1fr))",
 
     gap: "25px",
+  },
+
+  relayBox: {
+    marginTop: "40px",
+
+    background:
+      "rgba(255,255,255,0.08)",
+
+    padding: "30px",
+
+    borderRadius: "20px",
+  },
+
+  onButton: {
+    padding: "15px 25px",
+
+    marginRight: "20px",
+
+    background: "#22c55e",
+
+    border: "none",
+
+    borderRadius: "10px",
+
+    color: "white",
+
+    cursor: "pointer",
+  },
+
+  offButton: {
+    padding: "15px 25px",
+
+    background: "#ef4444",
+
+    border: "none",
+
+    borderRadius: "10px",
+
+    color: "white",
+
+    cursor: "pointer",
   },
 };
 
