@@ -4,11 +4,15 @@ import { ref, get } from "firebase/database";
 
 import { db } from "../services/firebase";
 
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
 import {
   FaFileDownload,
   FaCalendarAlt,
   FaClock,
   FaChartBar,
+  FaFilePdf,
 } from "react-icons/fa";
 
 /* ================= REPORTS ================= */
@@ -33,9 +37,122 @@ function Reports() {
   const [preview, setPreview] =
     useState("");
 
-  // ================= DOWNLOAD REPORT =================
+  /* ================= GENERATE REPORT ================= */
 
-  const handleDownload = async () => {
+  const generateReport = async () => {
+
+    const historyRef =
+      ref(db, "history");
+
+    const snapshot =
+      await get(historyRef);
+
+    const data =
+      snapshot.val();
+
+    let reportData = [];
+
+    if (data) {
+
+      reportData =
+        Object.values(data);
+    }
+
+    /* ================= FILTER ================= */
+
+    const fromDateTime =
+      new Date(
+        `${fromDate}T${fromTime}`
+      );
+
+    const toDateTime =
+      new Date(
+        `${toDate}T${toTime}`
+      );
+
+    const filtered =
+      reportData.filter((item) => {
+
+        if (!item.date || !item.time)
+          return false;
+
+        const itemDateTime =
+          new Date(
+            `${item.date}T${item.time}`
+          );
+
+        return (
+          itemDateTime >= fromDateTime &&
+          itemDateTime <= toDateTime
+        );
+      });
+
+    /* ================= CALCULATIONS ================= */
+
+    const totalVoltage =
+      filtered.reduce(
+        (sum, item) =>
+          sum + Number(item.voltage || 0),
+        0
+      );
+
+    const totalCurrent =
+      filtered.reduce(
+        (sum, item) =>
+          sum + Number(item.current || 0),
+        0
+      );
+
+    const totalPower =
+      filtered.reduce(
+        (sum, item) =>
+          sum + Number(item.power || 0),
+        0
+      );
+
+    const totalEnergy =
+      filtered.reduce(
+        (sum, item) =>
+          sum + Number(item.energy || 0),
+        0
+      );
+
+    const avgVoltage =
+      filtered.length > 0
+        ? (
+            totalVoltage /
+            filtered.length
+          ).toFixed(2)
+        : 0;
+
+    const avgCurrent =
+      filtered.length > 0
+        ? (
+            totalCurrent /
+            filtered.length
+          ).toFixed(2)
+        : 0;
+
+    const avgPower =
+      filtered.length > 0
+        ? (
+            totalPower /
+            filtered.length
+          ).toFixed(2)
+        : 0;
+
+    return {
+      filtered,
+      avgVoltage,
+      avgCurrent,
+      avgPower,
+      totalEnergy,
+    };
+  };
+
+  /* ================= TXT DOWNLOAD ================= */
+
+  const handleDownloadTXT = async () => {
 
     if (
       !fromDate ||
@@ -53,107 +170,13 @@ function Reports() {
 
     try {
 
-      const historyRef =
-        ref(db, "history");
-
-      const snapshot =
-        await get(historyRef);
-
-      const data =
-        snapshot.val();
-
-      let reportData = [];
-
-      if (data) {
-
-        reportData =
-          Object.values(data);
-      }
-
-      // ================= FILTER DATA =================
-
-      const fromDateTime =
-        new Date(
-          `${fromDate}T${fromTime}`
-        );
-
-      const toDateTime =
-        new Date(
-          `${toDate}T${toTime}`
-        );
-
-      const filtered =
-        reportData.filter((item) => {
-
-          if (!item.date || !item.time)
-            return false;
-
-          const itemDateTime =
-            new Date(
-              `${item.date}T${item.time}`
-            );
-
-          return (
-            itemDateTime >= fromDateTime &&
-            itemDateTime <= toDateTime
-          );
-        });
-
-      // ================= CALCULATIONS =================
-
-      const totalVoltage =
-        filtered.reduce(
-          (sum, item) =>
-            sum + Number(item.voltage || 0),
-          0
-        );
-
-      const totalCurrent =
-        filtered.reduce(
-          (sum, item) =>
-            sum + Number(item.current || 0),
-          0
-        );
-
-      const totalPower =
-        filtered.reduce(
-          (sum, item) =>
-            sum + Number(item.power || 0),
-          0
-        );
-
-      const totalEnergy =
-        filtered.reduce(
-          (sum, item) =>
-            sum + Number(item.energy || 0),
-          0
-        );
-
-      const avgVoltage =
-        filtered.length > 0
-          ? (
-              totalVoltage /
-              filtered.length
-            ).toFixed(2)
-          : 0;
-
-      const avgCurrent =
-        filtered.length > 0
-          ? (
-              totalCurrent /
-              filtered.length
-            ).toFixed(2)
-          : 0;
-
-      const avgPower =
-        filtered.length > 0
-          ? (
-              totalPower /
-              filtered.length
-            ).toFixed(2)
-          : 0;
-
-      // ================= REPORT CONTENT =================
+      const {
+        filtered,
+        avgVoltage,
+        avgCurrent,
+        avgPower,
+        totalEnergy,
+      } = await generateReport();
 
       const reportContent = `
 
@@ -185,53 +208,11 @@ TOTAL ENERGY:
 ${totalEnergy.toFixed(3)} kWh
 
 ==========================================
-              SENSOR DATA
-==========================================
-
-${filtered.map((item, index) => `
-
-Record ${index + 1}
-
-Date:
-${item.date}
-
-Time:
-${item.time}
-
-Voltage:
-${item.voltage} V
-
-Current:
-${item.current} A
-
-Power:
-${item.power} W
-
-Energy:
-${item.energy} kWh
-
-Water Flow:
-${item.waterFlow || 0} L/min
-
-Water Level:
-${item.waterLevel || 0} cm
-
-------------------------------------------
-`).join("")}
-
-==========================================
-      GENERATED BY NEX VOLT SYSTEM
-==========================================
-
 `;
 
-      // ================= PREVIEW =================
-
       setPreview(
-        reportContent.slice(0, 1200)
+        reportContent
       );
-
-      // ================= DOWNLOAD =================
 
       const blob = new Blob(
         [reportContent],
@@ -246,24 +227,155 @@ ${item.waterLevel || 0} cm
       link.href =
         URL.createObjectURL(blob);
 
-      const timestamp =
-        new Date()
-          .toISOString()
-          .replace(/[:.]/g, "-");
-
       link.download =
-        `NexVolt_Report_${timestamp}.txt`;
+        "NexVolt_Report.txt";
 
       link.click();
-
-      URL.revokeObjectURL(link.href);
 
     } catch (error) {
 
       console.log(error);
 
       alert(
-        "❌ Error generating report"
+        "❌ Error generating TXT report"
+      );
+    }
+
+    setLoading(false);
+  };
+
+  /* ================= PDF DOWNLOAD ================= */
+
+  const handleDownloadPDF = async () => {
+
+    if (
+      !fromDate ||
+      !toDate ||
+      !fromTime ||
+      !toTime
+    ) {
+
+      alert("⚠ Please select all fields");
+
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+
+      const {
+        filtered,
+        avgVoltage,
+        avgCurrent,
+        avgPower,
+        totalEnergy,
+      } = await generateReport();
+
+      /* ================= PDF ================= */
+
+      const doc =
+        new jsPDF();
+
+      doc.setFontSize(20);
+
+      doc.text(
+        "NEX VOLT SMART REPORT",
+        14,
+        20
+      );
+
+      doc.setFontSize(12);
+
+      doc.text(
+        `FROM: ${fromDate} ${fromTime}`,
+        14,
+        35
+      );
+
+      doc.text(
+        `TO: ${toDate} ${toTime}`,
+        14,
+        45
+      );
+
+      doc.text(
+        `TOTAL RECORDS: ${filtered.length}`,
+        14,
+        60
+      );
+
+      doc.text(
+        `AVG VOLTAGE: ${avgVoltage} V`,
+        14,
+        70
+      );
+
+      doc.text(
+        `AVG CURRENT: ${avgCurrent} A`,
+        14,
+        80
+      );
+
+      doc.text(
+        `AVG POWER: ${avgPower} W`,
+        14,
+        90
+      );
+
+      doc.text(
+        `TOTAL ENERGY: ${totalEnergy.toFixed(
+          3
+        )} kWh`,
+        14,
+        100
+      );
+
+      /* ================= TABLE ================= */
+
+      autoTable(doc, {
+        startY: 115,
+
+        head: [[
+          "Date",
+          "Time",
+          "Voltage",
+          "Current",
+          "Power",
+          "Energy",
+          "Water Flow",
+          "Water Level",
+        ]],
+
+        body: filtered.map(
+          (item) => [
+            item.date,
+            item.time,
+            `${item.voltage} V`,
+            `${item.current} A`,
+            `${item.power} W`,
+            `${item.energy} kWh`,
+            `${item.waterFlow || 0} L/min`,
+            `${item.waterLevel || 0} cm`,
+          ]
+        ),
+      });
+
+      const timestamp =
+        new Date()
+          .toISOString()
+          .replace(/[:.]/g, "-");
+
+      doc.save(
+        `NexVolt_Report_${timestamp}.pdf`
+      );
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert(
+        "❌ Error generating PDF report"
       );
     }
 
@@ -274,7 +386,7 @@ ${item.waterLevel || 0} cm
 
     <div style={styles.container}>
 
-      {/* ================= TITLE ================= */}
+      {/* ================= HEADER ================= */}
 
       <div style={styles.header}>
 
@@ -381,10 +493,10 @@ ${item.waterLevel || 0} cm
 
         </div>
 
-        {/* DOWNLOAD BUTTON */}
+        {/* TXT BUTTON */}
 
         <button
-          onClick={handleDownload}
+          onClick={handleDownloadTXT}
           style={styles.button}
         >
 
@@ -392,7 +504,24 @@ ${item.waterLevel || 0} cm
 
           {loading
             ? "Generating..."
-            : "Download Report"}
+            : "Download TXT Report"}
+
+        </button>
+
+        {/* PDF BUTTON */}
+
+        <button
+          onClick={handleDownloadPDF}
+          style={{
+            ...styles.button,
+            marginTop: "15px",
+            background: "#ef4444",
+          }}
+        >
+
+          <FaFilePdf />
+
+          Download PDF Report
 
         </button>
 
@@ -492,7 +621,6 @@ const styles = {
     justifyContent: "center",
     alignItems: "center",
     gap: "10px",
-    marginTop: "15px",
   },
 
   previewCard: {
