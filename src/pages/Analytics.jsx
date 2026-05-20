@@ -25,7 +25,16 @@ import {
   FaRulerVertical,
 } from "react-icons/fa";
 
-/* ================= ANALYTICS ================= */
+/* ================= DEFAULT SETTINGS ================= */
+
+const defaultSettings = {
+  voltage: { min: 180, max: 250 },
+  current: { min: 1, max: 10 },
+  power: { max: 3000 },
+  energy: { max: 50 },
+  waterFlow: { min: 1, max: 20 },
+  waterLevel: { min: 2, max: 18 },
+};
 
 function Analytics() {
 
@@ -33,30 +42,73 @@ function Analytics() {
 
   const [chartKey, setChartKey] = useState(0);
 
-  const [settings, setSettings] = useState({
-    voltage: { min: 180, max: 250 },
-    current: { min: 1, max: 10 },
-    power: { max: 3000 },
-    energy: { max: 50 },
-    waterFlow: { min: 1, max: 20 },
-    waterLevel: { min: 2, max: 18 },
-  });
+  const [settings, setSettings] =
+    useState(defaultSettings);
 
-  // ================= LOAD SETTINGS =================
+  /* ================= LOAD SETTINGS ================= */
 
   useEffect(() => {
 
-    const saved =
-      JSON.parse(localStorage.getItem("settings"));
+    try {
 
-    if (saved) {
+      const saved =
+        JSON.parse(
+          localStorage.getItem("settings")
+        );
 
-      setSettings(saved);
+      if (saved) {
+
+        setSettings({
+
+          ...defaultSettings,
+
+          ...saved,
+
+          voltage: {
+            ...defaultSettings.voltage,
+            ...(saved.voltage || {}),
+          },
+
+          current: {
+            ...defaultSettings.current,
+            ...(saved.current || {}),
+          },
+
+          power: {
+            ...defaultSettings.power,
+            ...(saved.power || {}),
+          },
+
+          energy: {
+            ...defaultSettings.energy,
+            ...(saved.energy || {}),
+          },
+
+          waterFlow: {
+            ...defaultSettings.waterFlow,
+            ...(saved.waterFlow || {}),
+          },
+
+          waterLevel: {
+            ...defaultSettings.waterLevel,
+            ...(saved.waterLevel || {}),
+          },
+        });
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Settings Load Error:",
+        error
+      );
+
+      setSettings(defaultSettings);
     }
 
   }, []);
 
-  // ================= FIREBASE =================
+  /* ================= FIREBASE HISTORY ================= */
 
   useEffect(() => {
 
@@ -100,17 +152,14 @@ function Analytics() {
               data[key].date || "",
           }));
 
-        // latest first
         const sorted =
           formattedData.reverse();
 
-        // only last 20 records
         const latest =
           sorted.slice(0, 20);
 
         setHistory(latest);
 
-        // force animation
         setChartKey((prev) => prev + 1);
       }
     );
@@ -118,13 +167,6 @@ function Analytics() {
     return () => unsubscribe();
 
   }, []);
-
-  // ================= SUMMARY =================
-
-  const latest =
-    history.length > 0
-      ? history[0]
-      : {};
 
   return (
 
@@ -142,47 +184,6 @@ function Analytics() {
         <h1 style={styles.title}>
           Analytics Dashboard
         </h1>
-
-      </div>
-
-      {/* ================= SUMMARY CARDS ================= */}
-
-      <div style={styles.summaryGrid}>
-
-        <SummaryCard
-          title="Voltage"
-          value={`${latest.voltage || 0} V`}
-          icon={<FaBolt />}
-          glow="#00ffff"
-        />
-
-        <SummaryCard
-          title="Current"
-          value={`${latest.current || 0} A`}
-          icon={<FaPlug />}
-          glow="#22c55e"
-        />
-
-        <SummaryCard
-          title="Power"
-          value={`${latest.power || 0} W`}
-          icon={<FaBatteryHalf />}
-          glow="#f59e0b"
-        />
-
-        <SummaryCard
-          title="Water Flow"
-          value={`${latest.waterFlow || 0} L/min`}
-          icon={<FaWater />}
-          glow="#06b6d4"
-        />
-
-        <SummaryCard
-          title="Water Level"
-          value={`${latest.waterLevel || 0} cm`}
-          icon={<FaRulerVertical />}
-          glow="#14b8a6"
-        />
 
       </div>
 
@@ -212,14 +213,14 @@ function Analytics() {
           <Legend />
 
           <ReferenceLine
-            y={settings.voltage.max}
+            y={settings?.voltage?.max || 250}
             label="Max"
             stroke="red"
             strokeDasharray="3 3"
           />
 
           <ReferenceLine
-            y={settings.voltage.min}
+            y={settings?.voltage?.min || 180}
             label="Min"
             stroke="orange"
             strokeDasharray="3 3"
@@ -264,7 +265,7 @@ function Analytics() {
           <Legend />
 
           <ReferenceLine
-            y={settings.current.max}
+            y={settings?.current?.max || 10}
             label="Max"
             stroke="red"
             strokeDasharray="3 3"
@@ -309,7 +310,7 @@ function Analytics() {
           <Legend />
 
           <ReferenceLine
-            y={settings.power.max}
+            y={settings?.power?.max || 3000}
             label="Max"
             stroke="red"
             strokeDasharray="3 3"
@@ -354,7 +355,7 @@ function Analytics() {
           <Legend />
 
           <ReferenceLine
-            y={settings.energy.max}
+            y={settings?.energy?.max || 50}
             label="Max"
             stroke="red"
             strokeDasharray="3 3"
@@ -399,7 +400,7 @@ function Analytics() {
           <Legend />
 
           <ReferenceLine
-            y={settings.waterFlow.max}
+            y={settings?.waterFlow?.max || 20}
             label="Max"
             stroke="red"
             strokeDasharray="3 3"
@@ -444,7 +445,7 @@ function Analytics() {
           <Legend />
 
           <ReferenceLine
-            y={settings.waterLevel.max}
+            y={settings?.waterLevel?.max || 18}
             label="Max"
             stroke="red"
             strokeDasharray="3 3"
@@ -462,41 +463,6 @@ function Analytics() {
         </LineChart>
 
       </ChartCard>
-
-    </div>
-  );
-}
-
-/* ================= SUMMARY CARD ================= */
-
-function SummaryCard({
-  title,
-  value,
-  icon,
-  glow,
-}) {
-
-  return (
-
-    <div
-      style={{
-        ...styles.summaryCard,
-        boxShadow: `0 0 20px ${glow}`,
-      }}
-    >
-
-      <div
-        style={{
-          ...styles.summaryIcon,
-          background: glow,
-        }}
-      >
-        {icon}
-      </div>
-
-      <h3>{title}</h3>
-
-      <h2>{value}</h2>
 
     </div>
   );
@@ -559,33 +525,6 @@ const styles = {
   title: {
     fontSize: "38px",
     margin: 0,
-  },
-
-  summaryGrid: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fit,minmax(180px,1fr))",
-    gap: "20px",
-    marginBottom: "35px",
-  },
-
-  summaryCard: {
-    background: "rgba(255,255,255,0.08)",
-    padding: "20px",
-    borderRadius: "20px",
-    textAlign: "center",
-  },
-
-  summaryIcon: {
-    width: "55px",
-    height: "55px",
-    borderRadius: "15px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0 auto 15px auto",
-    color: "#0f172a",
-    fontSize: "22px",
   },
 
   card: {

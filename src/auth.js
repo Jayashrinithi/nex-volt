@@ -1,102 +1,212 @@
 export const Auth = {
+
   // =========================
   // SIGNUP
   // =========================
+
   signup(email, password, cb) {
+
     if (!email || !password) {
-      alert("Please fill all fields");
+
+      alert("⚠ Please fill all fields");
+
       return false;
     }
 
-    const existingUser = JSON.parse(localStorage.getItem("userData"));
+    // get users array
+    const users =
+      JSON.parse(
+        localStorage.getItem("users")
+      ) || [];
 
-    // prevent overwrite
-    if (existingUser?.email === email) {
-      alert("User already exists. Please login.");
+    // check existing user
+    const existingUser =
+      users.find(
+        (u) => u.email === email
+      );
+
+    if (existingUser) {
+
+      alert(
+        "⚠ User already exists. Please login."
+      );
+
       return false;
     }
 
-    const user = {
+    // create new user
+    const newUser = {
+
       email,
-      password, // (demo only)
-      createdAt: new Date().toISOString(),
+      password, // demo only
+
+      createdAt:
+        new Date().toISOString(),
     };
 
-    localStorage.setItem("userData", JSON.stringify(user));
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("currentUser", email);
+    // save user
+    users.push(newUser);
+
+    localStorage.setItem(
+      "users",
+      JSON.stringify(users)
+    );
+
+    // login automatically
+    localStorage.setItem(
+      "isLoggedIn",
+      "true"
+    );
+
+    localStorage.setItem(
+      "currentUser",
+      email
+    );
 
     cb?.();
+
     return true;
   },
 
   // =========================
   // LOGIN
   // =========================
+
   login(email, password, cb) {
+
     if (!email || !password) {
-      alert("Please enter email and password");
+
+      alert(
+        "⚠ Please enter email and password"
+      );
+
       return false;
     }
 
-    const savedUser = JSON.parse(localStorage.getItem("userData"));
+    const users =
+      JSON.parse(
+        localStorage.getItem("users")
+      ) || [];
 
-    if (!savedUser) {
-      alert("No user found. Please sign up first.");
+    // find matching user
+    const matchedUser =
+      users.find(
+        (u) =>
+          u.email === email &&
+          u.password === password
+      );
+
+    if (!matchedUser) {
+
+      alert(
+        "❌ Invalid email or password"
+      );
+
       return false;
     }
 
-    if (
-      savedUser.email === email &&
-      savedUser.password === password
-    ) {
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("currentUser", email);
+    // session
+    localStorage.setItem(
+      "isLoggedIn",
+      "true"
+    );
 
-      cb?.();
-      return true;
-    }
-
-    return false;
-  },
-
-  // =========================
-  // LOGOUT
-  // =========================
-  logout(cb) {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("currentUser");
+    localStorage.setItem(
+      "currentUser",
+      email
+    );
 
     cb?.();
+
+    return true;
   },
 
   // =========================
-  // CHECK AUTH
+// LOGOUT
+// =========================
+logout(cb) {
+
+  // remove login session only
+  localStorage.removeItem("isLoggedIn");
+  localStorage.removeItem("currentUser");
+
+  // force app refresh
+  window.dispatchEvent(new Event("authChanged"));
+
+  cb?.();
+},
+
   // =========================
+  // AUTH CHECK
+  // =========================
+
   isAuthenticated() {
-    return localStorage.getItem("isLoggedIn") === "true";
+
+    return (
+      localStorage.getItem(
+        "isLoggedIn"
+      ) === "true"
+    );
   },
 
   // =========================
-  // CURRENT USER
+  // GET CURRENT USER
   // =========================
+
   getCurrentUser() {
-    return localStorage.getItem("currentUser");
+
+    return localStorage.getItem(
+      "currentUser"
+    );
   },
 
   // =========================
   // CHANGE PASSWORD
   // =========================
+
   changePassword(newPassword) {
-    if (!newPassword) return false;
 
-    const savedUser = JSON.parse(localStorage.getItem("userData"));
+    if (!newPassword) {
 
-    if (!savedUser) return false;
+      return false;
+    }
 
-    savedUser.password = newPassword;
+    const currentUser =
+      localStorage.getItem(
+        "currentUser"
+      );
 
-    localStorage.setItem("userData", JSON.stringify(savedUser));
+    if (!currentUser) {
+
+      return false;
+    }
+
+    const users =
+      JSON.parse(
+        localStorage.getItem("users")
+      ) || [];
+
+    const updatedUsers =
+      users.map((user) => {
+
+        if (
+          user.email === currentUser
+        ) {
+
+          return {
+
+            ...user,
+            password: newPassword,
+          };
+        }
+
+        return user;
+      });
+
+    localStorage.setItem(
+      "users",
+      JSON.stringify(updatedUsers)
+    );
 
     return true;
   },

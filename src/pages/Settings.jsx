@@ -488,6 +488,7 @@ const styles = {
   container: {
     minHeight: "100vh",
     padding: "40px",
+    marginLeft: "260px",
     transition: "0.3s",
   },
 

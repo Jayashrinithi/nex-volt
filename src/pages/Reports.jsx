@@ -427,6 +427,7 @@ const styles = {
   container: {
     minHeight: "100vh",
     padding: "40px",
+    marginLeft: "260px",
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
     color: "white",

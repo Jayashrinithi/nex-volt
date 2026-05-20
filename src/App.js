@@ -26,23 +26,38 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-/* ================= APP ================= */
-
 function App() {
 
-  // ================= SETTINGS =================
+  const [isLoggedIn, setIsLoggedIn] = useState(
+    Auth.isAuthenticated()
+  );
 
   const [settings, setSettings] = useState(() => {
-
-    const savedSettings =
-      localStorage.getItem("settings");
-
-    return savedSettings
-      ? JSON.parse(savedSettings)
-      : {
-          darkMode: true,
-        };
+    return (
+      JSON.parse(localStorage.getItem("settings")) || {
+        darkMode: true,
+      }
+    );
   });
+
+  // ================= AUTH LISTENER =================
+
+  useEffect(() => {
+
+    const updateAuth = () => {
+      setIsLoggedIn(Auth.isAuthenticated());
+    };
+
+    window.addEventListener("authChanged", updateAuth);
+
+    return () => {
+      window.removeEventListener(
+        "authChanged",
+        updateAuth
+      );
+    };
+
+  }, []);
 
   // ================= SETTINGS LISTENER =================
 
@@ -50,24 +65,16 @@ function App() {
 
     const updateSettings = () => {
 
-      const updatedSettings =
+      const updated =
         JSON.parse(localStorage.getItem("settings"));
 
-      if (updatedSettings) {
-
-        setSettings(updatedSettings);
+      if (updated) {
+        setSettings(updated);
       }
     };
 
-    // Same tab update
     window.addEventListener(
       "settingsChanged",
-      updateSettings
-    );
-
-    // Multi-tab update
-    window.addEventListener(
-      "storage",
       updateSettings
     );
 
@@ -77,60 +84,38 @@ function App() {
         "settingsChanged",
         updateSettings
       );
-
-      window.removeEventListener(
-        "storage",
-        updateSettings
-      );
     };
 
   }, []);
 
-  // ================= THEME =================
-
-  const darkMode = settings.darkMode;
-
-  const appStyle = {
-
-    minHeight: "100vh",
-
-    background: darkMode
-      ? "linear-gradient(to right, #0f172a, #1e293b)"
-      : "linear-gradient(to right, #e2e8f0, #f8fafc)",
-
-    color: darkMode
-      ? "white"
-      : "#0f172a",
-
-    transition: "all 0.3s ease",
-
-    overflowX: "hidden",
-  };
-
   return (
 
-    <div style={appStyle}>
+    <div
+      style={{
+        minHeight: "100vh",
 
-      {/* ================= NAVBAR ================= */}
+        background: settings.darkMode
+          ? "linear-gradient(to right, #0f172a, #1e293b)"
+          : "#f1f5f9",
 
-      {Auth.isAuthenticated() && <Navbar />}
+        color: settings.darkMode
+          ? "white"
+          : "black",
 
-      {/* ================= ROUTES ================= */}
+        transition: "0.3s",
+      }}
+    >
+
+      {/* SIDEBAR ONLY AFTER LOGIN */}
+
+      {isLoggedIn && <Navbar />}
 
       <Routes>
 
-        {/* LOGIN */}
-
         <Route
           path="/"
-          element={
-            Auth.isAuthenticated()
-              ? <Navigate to="/dashboard" replace />
-              : <Login />
-          }
+          element={<Login />}
         />
-
-        {/* DASHBOARD */}
 
         <Route
           path="/dashboard"
@@ -141,8 +126,6 @@ function App() {
           }
         />
 
-        {/* ANALYTICS */}
-
         <Route
           path="/analytics"
           element={
@@ -151,8 +134,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* HISTORY */}
 
         <Route
           path="/history"
@@ -163,8 +144,6 @@ function App() {
           }
         />
 
-        {/* REPORTS */}
-
         <Route
           path="/reports"
           element={
@@ -174,30 +153,12 @@ function App() {
           }
         />
 
-        {/* SETTINGS */}
-
         <Route
           path="/settings"
           element={
             <ProtectedRoute>
               <Settings />
             </ProtectedRoute>
-          }
-        />
-
-        {/* UNKNOWN ROUTES */}
-
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to={
-                Auth.isAuthenticated()
-                  ? "/dashboard"
-                  : "/"
-              }
-              replace
-            />
           }
         />
 
