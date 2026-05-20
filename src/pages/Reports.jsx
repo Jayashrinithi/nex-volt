@@ -1,127 +1,516 @@
 import { useState } from "react";
+
 import { ref, get } from "firebase/database";
+
 import { db } from "../services/firebase";
 
+import {
+  FaFileDownload,
+  FaCalendarAlt,
+  FaClock,
+  FaChartBar,
+} from "react-icons/fa";
+
+/* ================= REPORTS ================= */
+
 function Reports() {
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [fromTime, setFromTime] = useState("");
-  const [toTime, setToTime] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  const [fromDate, setFromDate] =
+    useState("");
+
+  const [toDate, setToDate] =
+    useState("");
+
+  const [fromTime, setFromTime] =
+    useState("");
+
+  const [toTime, setToTime] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [preview, setPreview] =
+    useState("");
+
+  // ================= DOWNLOAD REPORT =================
 
   const handleDownload = async () => {
-    if (!fromDate || !toDate || !fromTime || !toTime) {
-      alert("Please select all fields");
+
+    if (
+      !fromDate ||
+      !toDate ||
+      !fromTime ||
+      !toTime
+    ) {
+
+      alert("⚠ Please select all fields");
+
       return;
     }
 
     setLoading(true);
 
     try {
-      const historyRef = ref(db, "history");
-      const snapshot = await get(historyRef);
-      const data = snapshot.val();
+
+      const historyRef =
+        ref(db, "history");
+
+      const snapshot =
+        await get(historyRef);
+
+      const data =
+        snapshot.val();
 
       let reportData = [];
 
       if (data) {
-        reportData = Object.values(data);
+
+        reportData =
+          Object.values(data);
       }
 
+      // ================= FILTER DATA =================
+
+      const fromDateTime =
+        new Date(
+          `${fromDate}T${fromTime}`
+        );
+
+      const toDateTime =
+        new Date(
+          `${toDate}T${toTime}`
+        );
+
+      const filtered =
+        reportData.filter((item) => {
+
+          if (!item.date || !item.time)
+            return false;
+
+          const itemDateTime =
+            new Date(
+              `${item.date}T${item.time}`
+            );
+
+          return (
+            itemDateTime >= fromDateTime &&
+            itemDateTime <= toDateTime
+          );
+        });
+
+      // ================= CALCULATIONS =================
+
+      const totalVoltage =
+        filtered.reduce(
+          (sum, item) =>
+            sum + Number(item.voltage || 0),
+          0
+        );
+
+      const totalCurrent =
+        filtered.reduce(
+          (sum, item) =>
+            sum + Number(item.current || 0),
+          0
+        );
+
+      const totalPower =
+        filtered.reduce(
+          (sum, item) =>
+            sum + Number(item.power || 0),
+          0
+        );
+
+      const totalEnergy =
+        filtered.reduce(
+          (sum, item) =>
+            sum + Number(item.energy || 0),
+          0
+        );
+
+      const avgVoltage =
+        filtered.length > 0
+          ? (
+              totalVoltage /
+              filtered.length
+            ).toFixed(2)
+          : 0;
+
+      const avgCurrent =
+        filtered.length > 0
+          ? (
+              totalCurrent /
+              filtered.length
+            ).toFixed(2)
+          : 0;
+
+      const avgPower =
+        filtered.length > 0
+          ? (
+              totalPower /
+              filtered.length
+            ).toFixed(2)
+          : 0;
+
+      // ================= REPORT CONTENT =================
+
       const reportContent = `
-NEX VOLT REPORT
 
-FROM: ${fromDate} ${fromTime}
-TO: ${toDate} ${toTime}
+==========================================
+        ⚡ NEX VOLT SMART REPORT
+==========================================
 
-----------------------------
-TOTAL RECORDS: ${reportData.length}
+FROM:
+${fromDate} ${fromTime}
 
-SAMPLE DATA:
-${reportData.slice(0, 5).map(item => `
-Voltage: ${item.voltage}
-Current: ${item.current}
-Power: ${item.power}
-Energy: ${item.energy}
-Water Flow: ${item.waterFlow}
-----------------------------
-`).join("\n")}
+TO:
+${toDate} ${toTime}
+
+==========================================
+
+TOTAL RECORDS:
+${filtered.length}
+
+AVERAGE VOLTAGE:
+${avgVoltage} V
+
+AVERAGE CURRENT:
+${avgCurrent} A
+
+AVERAGE POWER:
+${avgPower} W
+
+TOTAL ENERGY:
+${totalEnergy.toFixed(3)} kWh
+
+==========================================
+              SENSOR DATA
+==========================================
+
+${filtered.map((item, index) => `
+
+Record ${index + 1}
+
+Date:
+${item.date}
+
+Time:
+${item.time}
+
+Voltage:
+${item.voltage} V
+
+Current:
+${item.current} A
+
+Power:
+${item.power} W
+
+Energy:
+${item.energy} kWh
+
+Water Flow:
+${item.waterFlow || 0} L/min
+
+Water Level:
+${item.waterLevel || 0} cm
+
+------------------------------------------
+`).join("")}
+
+==========================================
+      GENERATED BY NEX VOLT SYSTEM
+==========================================
+
 `;
 
-      const blob = new Blob([reportContent], {
-        type: "text/plain",
-      });
+      // ================= PREVIEW =================
 
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "NexVolt_Report.txt";
+      setPreview(
+        reportContent.slice(0, 1200)
+      );
+
+      // ================= DOWNLOAD =================
+
+      const blob = new Blob(
+        [reportContent],
+        {
+          type: "text/plain",
+        }
+      );
+
+      const link =
+        document.createElement("a");
+
+      link.href =
+        URL.createObjectURL(blob);
+
+      const timestamp =
+        new Date()
+          .toISOString()
+          .replace(/[:.]/g, "-");
+
+      link.download =
+        `NexVolt_Report_${timestamp}.txt`;
+
       link.click();
 
+      URL.revokeObjectURL(link.href);
+
     } catch (error) {
-      alert("Error generating report");
+
       console.log(error);
+
+      alert(
+        "❌ Error generating report"
+      );
     }
 
     setLoading(false);
   };
 
   return (
+
     <div style={styles.container}>
-      <h1 style={styles.title}>📄 Reports Center</h1>
+
+      {/* ================= TITLE ================= */}
+
+      <div style={styles.header}>
+
+        <FaChartBar
+          size={35}
+          color="cyan"
+        />
+
+        <h1 style={styles.title}>
+          Reports Center
+        </h1>
+
+      </div>
+
+      {/* ================= CARD ================= */}
 
       <div style={styles.card}>
-        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} style={styles.input} />
-        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={styles.input} />
-        <input type="time" value={fromTime} onChange={(e) => setFromTime(e.target.value)} style={styles.input} />
-        <input type="time" value={toTime} onChange={(e) => setToTime(e.target.value)} style={styles.input} />
 
-        <button onClick={handleDownload} style={styles.button}>
-          {loading ? "Generating..." : "Download Report"}
+        {/* FROM DATE */}
+
+        <div style={styles.inputGroup}>
+
+          <label style={styles.label}>
+            <FaCalendarAlt />
+            From Date
+          </label>
+
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) =>
+              setFromDate(
+                e.target.value
+              )
+            }
+            style={styles.input}
+          />
+
+        </div>
+
+        {/* TO DATE */}
+
+        <div style={styles.inputGroup}>
+
+          <label style={styles.label}>
+            <FaCalendarAlt />
+            To Date
+          </label>
+
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) =>
+              setToDate(
+                e.target.value
+              )
+            }
+            style={styles.input}
+          />
+
+        </div>
+
+        {/* FROM TIME */}
+
+        <div style={styles.inputGroup}>
+
+          <label style={styles.label}>
+            <FaClock />
+            From Time
+          </label>
+
+          <input
+            type="time"
+            value={fromTime}
+            onChange={(e) =>
+              setFromTime(
+                e.target.value
+              )
+            }
+            style={styles.input}
+          />
+
+        </div>
+
+        {/* TO TIME */}
+
+        <div style={styles.inputGroup}>
+
+          <label style={styles.label}>
+            <FaClock />
+            To Time
+          </label>
+
+          <input
+            type="time"
+            value={toTime}
+            onChange={(e) =>
+              setToTime(
+                e.target.value
+              )
+            }
+            style={styles.input}
+          />
+
+        </div>
+
+        {/* DOWNLOAD BUTTON */}
+
+        <button
+          onClick={handleDownload}
+          style={styles.button}
+        >
+
+          <FaFileDownload />
+
+          {loading
+            ? "Generating..."
+            : "Download Report"}
+
         </button>
+
       </div>
+
+      {/* ================= PREVIEW ================= */}
+
+      {preview && (
+
+        <div style={styles.previewCard}>
+
+          <h2 style={styles.previewTitle}>
+            📄 Report Preview
+          </h2>
+
+          <pre style={styles.preview}>
+            {preview}
+          </pre>
+
+        </div>
+
+      )}
+
     </div>
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = {
+
   container: {
     minHeight: "100vh",
     padding: "40px",
-    background: "linear-gradient(to right, #0f172a, #1e293b)",
+    background:
+      "linear-gradient(to right, #0f172a, #1e293b)",
     color: "white",
-    marginLeft: "80px",
+  },
+
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+    marginBottom: "35px",
   },
 
   title: {
     fontSize: "40px",
-    marginBottom: "30px",
+    margin: 0,
   },
 
   card: {
-    background: "rgba(255,255,255,0.08)",
+    maxWidth: "650px",
+    background:
+      "rgba(255,255,255,0.08)",
     padding: "30px",
     borderRadius: "20px",
-    boxShadow: "0 0 20px cyan",
-    maxWidth: "500px",
+    backdropFilter: "blur(10px)",
+    boxShadow:
+      "0 0 20px rgba(0,255,255,0.25)",
+    marginBottom: "30px",
+  },
+
+  inputGroup: {
+    marginBottom: "20px",
+  },
+
+  label: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    marginBottom: "10px",
+    fontSize: "16px",
   },
 
   input: {
     width: "100%",
     padding: "14px",
-    marginBottom: "15px",
-    borderRadius: "10px",
+    borderRadius: "12px",
     border: "none",
+    outline: "none",
+    fontSize: "15px",
   },
 
   button: {
     width: "100%",
-    padding: "15px",
-    background: "cyan",
+    padding: "16px",
     border: "none",
-    borderRadius: "10px",
+    borderRadius: "12px",
+    background: "#06b6d4",
+    color: "white",
     fontSize: "18px",
     fontWeight: "bold",
     cursor: "pointer",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "10px",
+    marginTop: "15px",
+  },
+
+  previewCard: {
+    background:
+      "rgba(255,255,255,0.08)",
+    padding: "25px",
+    borderRadius: "20px",
+    backdropFilter: "blur(10px)",
+  },
+
+  previewTitle: {
+    marginBottom: "20px",
+  },
+
+  preview: {
+    whiteSpace: "pre-wrap",
+    lineHeight: "1.7",
+    fontSize: "14px",
+    overflowX: "auto",
   },
 };
 
