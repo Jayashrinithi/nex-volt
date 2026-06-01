@@ -40,7 +40,9 @@ function Dashboard() {
 
   const playSound = () => {
 
-    const audio = new Audio("/alert.mp3");
+    const audio = new Audio(
+  process.env.PUBLIC_URL + "/alert.mp3"
+);
 
     audio.play().catch(() => {
       console.log("Sound blocked");
@@ -57,7 +59,7 @@ function Dashboard() {
 
       new Notification("⚠ IoT Alert", {
         body: message,
-        icon: "/logo192.png",
+        icon: process.env.PUBLIC_URL + "/logo192.png",
       });
     }
   };
@@ -77,7 +79,7 @@ function Dashboard() {
 
   useEffect(() => {
 
-    const sensorRef = ref(db, "sensorData");
+    const sensorRef = ref(db, "liveData");
 
     const unsubscribe = onValue(
       sensorRef,
@@ -87,29 +89,17 @@ function Dashboard() {
 
         if (!firebaseData) return;
 
-        const formattedData = {
+       const formattedData = {
+  voltage: Number(firebaseData.voltage ?? 0),
+  current: Number(firebaseData.current ?? 0),
+  power: Number(firebaseData.power ?? 0),
+  energy: Number(firebaseData.energy ?? 0),
+  waterFlow: Number(firebaseData.waterFlow ?? 0),
+  waterLevel: Number(firebaseData.waterLevel ?? 0),
 
-          voltage:
-            Number(firebaseData.voltage || 0),
-
-          current:
-            Number(firebaseData.current || 0),
-
-          power:
-            Number(firebaseData.power || 0),
-
-          energy:
-            Number(firebaseData.energy || 0),
-
-          waterFlow:
-            Number(firebaseData.waterFlow || 0),
-
-          waterLevel:
-            Number(firebaseData.waterLevel || 0),
-
-          relay:
-            firebaseData.relay || false,
-        };
+  // relay not present in current Firebase structure
+  relay: false,
+};
 
         // LIVE UPDATE
         setData(formattedData);
@@ -275,34 +265,6 @@ function Dashboard() {
           glow="#06b6d4"
           danger={data.waterFlow > 20}
         />
-
-        <Card
-          icon={<FaRulerVertical />}
-          title="Water Level"
-          value={`${data.waterLevel.toFixed(1)} cm`}
-          glow="#14b8a6"
-          danger={data.waterLevel > 18}
-        />
-
-        <Card
-          icon={
-            data.relay
-              ? <FaToggleOn />
-              : <FaToggleOff />
-          }
-          title="Relay Status"
-          value={
-            data.relay
-              ? "ON"
-              : "OFF"
-          }
-          glow={
-            data.relay
-              ? "#22c55e"
-              : "#ef4444"
-          }
-        />
-
       </div>
 
     </div>
