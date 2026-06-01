@@ -35,7 +35,34 @@ function Dashboard() {
     useState("--:--");
 
   const lastAlertsRef = useRef([]);
+// ================= THEME =================
 
+const [darkMode, setDarkMode] = useState(
+  JSON.parse(localStorage.getItem("settings"))
+    ?.darkMode ?? true
+);
+
+useEffect(() => {
+  const updateTheme = () => {
+    const saved = JSON.parse(
+      localStorage.getItem("settings")
+    );
+
+    setDarkMode(saved?.darkMode ?? true);
+  };
+
+  window.addEventListener(
+    "settingsChanged",
+    updateTheme
+  );
+
+  return () => {
+    window.removeEventListener(
+      "settingsChanged",
+      updateTheme
+    );
+  };
+}, []);
   // ================= SOUND =================
 
   const playSound = () => {
@@ -149,8 +176,15 @@ function Dashboard() {
   }, []);
 
   return (
-
-    <div style={styles.container}>
+<div
+  style={{
+    ...styles.container,
+    background: darkMode
+      ? "linear-gradient(to right, #0f172a, #1e293b)"
+      : "linear-gradient(to right, #e2e8f0, #f8fafc)",
+    color: darkMode ? "white" : "#0f172a",
+  }}
+>
 
       {/* ================= HEADER ================= */}
 
@@ -265,6 +299,13 @@ function Dashboard() {
           glow="#06b6d4"
           danger={data.waterFlow > 20}
         />
+        <Card
+  icon={<FaRulerVertical />}
+  title="Water Level"
+  value={`${data.waterLevel.toFixed(1)} cm`}
+  glow="#14b8a6"
+  danger={data.waterLevel > 18}
+/>
       </div>
 
     </div>
