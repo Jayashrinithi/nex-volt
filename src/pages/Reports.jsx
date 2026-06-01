@@ -1,9 +1,6 @@
 import { useState } from "react";
-
 import { ref, get } from "firebase/database";
-
 import { db } from "../services/firebase";
-
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -18,128 +15,103 @@ import {
 /* ================= REPORTS ================= */
 
 function Reports() {
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [fromTime, setFromTime] = useState("");
+  const [toTime, setToTime] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState("");
 
-  const [fromDate, setFromDate] =
-    useState("");
+  const parseDateTime = (dateValue, timeValue) => {
+    if (!dateValue || !timeValue) return null;
 
-  const [toDate, setToDate] =
-    useState("");
+    let normalizedDate = dateValue;
 
-  const [fromTime, setFromTime] =
-    useState("");
+    // Firebase records may be saved as dd-mm-yyyy or dd/mm/yyyy.
+    if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(dateValue)) {
+      const [day, month, year] = dateValue.split(/[-/]/);
+      normalizedDate = `${year}-${month}-${day}`;
+    }
 
-  const [toTime, setToTime] =
-    useState("");
+    const parsed = new Date(`${normalizedDate}T${timeValue}`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
 
-  const [loading, setLoading] =
-    useState(false);
+  const validateDateRange = () => {
+    if (!fromDate || !toDate || !fromTime || !toTime) {
+      alert("Please select all fields");
+      return null;
+    }
 
-  const [preview, setPreview] =
-    useState("");
+    const fromDateTime = parseDateTime(fromDate, fromTime);
+    const toDateTime = parseDateTime(toDate, toTime);
+
+    if (!fromDateTime || !toDateTime) {
+      alert("Please select a valid date and time range");
+      return null;
+    }
+
+    if (fromDateTime > toDateTime) {
+      alert("From date/time must be before To date/time");
+      return null;
+    }
+
+    return {
+      fromDateTime,
+      toDateTime,
+    };
+  };
 
   /* ================= GENERATE REPORT ================= */
 
-  const generateReport = async () => {
-
-    const historyRef =
-      ref(db, "history");
-
-    const snapshot =
-      await get(historyRef);
-
-    const data =
-      snapshot.val();
-
-    let reportData = [];
-
-    if (data) {
-
-      reportData =
-        Object.values(data);
-    }
+  const generateReport = async (fromDateTime, toDateTime) => {
+    const historyRef = ref(db, "history");
+    const snapshot = await get(historyRef);
+    const data = snapshot.val();
+    const reportData = data ? Object.values(data) : [];
 
     /* ================= FILTER ================= */
 
-    const fromDateTime =
-      new Date(
-        `${fromDate}T${fromTime}`
+    const filtered = reportData.filter((item) => {
+      const itemDateTime = parseDateTime(item.date, item.time);
+
+      return (
+        itemDateTime &&
+        itemDateTime >= fromDateTime &&
+        itemDateTime <= toDateTime
       );
-
-    const toDateTime =
-      new Date(
-        `${toDate}T${toTime}`
-      );
-
-    const filtered =
-      reportData.filter((item) => {
-
-        if (!item.date || !item.time)
-          return false;
-
-        const itemDateTime =
-          new Date(
-            `${item.date}T${item.time}`
-          );
-
-        return (
-          itemDateTime >= fromDateTime &&
-          itemDateTime <= toDateTime
-        );
-      });
+    });
 
     /* ================= CALCULATIONS ================= */
 
-    const totalVoltage =
-      filtered.reduce(
-        (sum, item) =>
-          sum + Number(item.voltage || 0),
-        0
-      );
+    const totalVoltage = filtered.reduce(
+      (sum, item) => sum + Number(item.voltage || 0),
+      0
+    );
 
-    const totalCurrent =
-      filtered.reduce(
-        (sum, item) =>
-          sum + Number(item.current || 0),
-        0
-      );
+    const totalCurrent = filtered.reduce(
+      (sum, item) => sum + Number(item.current || 0),
+      0
+    );
 
-    const totalPower =
-      filtered.reduce(
-        (sum, item) =>
-          sum + Number(item.power || 0),
-        0
-      );
+    const totalPower = filtered.reduce(
+      (sum, item) => sum + Number(item.power || 0),
+      0
+    );
 
-    const totalEnergy =
-      filtered.reduce(
-        (sum, item) =>
-          sum + Number(item.energy || 0),
-        0
-      );
+    const totalEnergy = filtered.reduce(
+      (sum, item) => sum + Number(item.energy || 0),
+      0
+    );
 
     const avgVoltage =
-      filtered.length > 0
-        ? (
-            totalVoltage /
-            filtered.length
-          ).toFixed(2)
-        : 0;
+      filtered.length > 0 ? (totalVoltage / filtered.length).toFixed(2) : "0";
 
     const avgCurrent =
-      filtered.length > 0
-        ? (
-            totalCurrent /
-            filtered.length
-          ).toFixed(2)
-        : 0;
+      filtered.length > 0 ? (totalCurrent / filtered.length).toFixed(2) : "0";
 
     const avgPower =
-      filtered.length > 0
-        ? (
-            totalPower /
-            filtered.length
-          ).toFixed(2)
-        : 0;
+      filtered.length > 0 ? (totalPower / filtered.length).toFixed(2) : "0";
 
     return {
       filtered,
@@ -150,38 +122,39 @@ function Reports() {
     };
   };
 
+  const getReport = async () => {
+    const dateRange = validateDateRange();
+    if (!dateRange) return null;
+
+    const report = await generateReport(
+      dateRange.fromDateTime,
+      dateRange.toDateTime
+    );
+
+    if (report.filtered.length === 0) {
+      alert("No history records found for this date/time range");
+      return null;
+    }
+
+    return report;
+  };
+
   /* ================= TXT DOWNLOAD ================= */
 
   const handleDownloadTXT = async () => {
-
-    if (
-      !fromDate ||
-      !toDate ||
-      !fromTime ||
-      !toTime
-    ) {
-
-      alert("⚠ Please select all fields");
-
-      return;
-    }
-
     setLoading(true);
 
     try {
+      const report = await getReport();
+      if (!report) return;
 
-      const {
-        filtered,
-        avgVoltage,
-        avgCurrent,
-        avgPower,
-        totalEnergy,
-      } = await generateReport();
+      const { filtered, avgVoltage, avgCurrent, avgPower, totalEnergy } =
+        report;
 
       const reportContent = `
 
 ==========================================
-        ⚡ NEX VOLT SMART REPORT
+        NEX VOLT SMART REPORT
 ==========================================
 
 FROM:
@@ -210,262 +183,103 @@ ${totalEnergy.toFixed(3)} kWh
 ==========================================
 `;
 
-      setPreview(
-        reportContent
-      );
+      setPreview(reportContent);
 
-      const blob = new Blob(
-        [reportContent],
-        {
-          type: "text/plain",
-        }
-      );
+      const blob = new Blob([reportContent], {
+        type: "text/plain",
+      });
 
-      const link =
-        document.createElement("a");
-
-      link.href =
-        URL.createObjectURL(blob);
-
-      link.download =
-        "NexVolt_Report.txt";
-
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "NexVolt_Report.txt";
       link.click();
-
+      URL.revokeObjectURL(link.href);
     } catch (error) {
-
       console.log(error);
-
-      alert(
-        "❌ Error generating TXT report"
-      );
+      alert("Error generating TXT report");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   /* ================= PDF DOWNLOAD ================= */
 
   const handleDownloadPDF = async () => {
-
-    if (
-      !fromDate ||
-      !toDate ||
-      !fromTime ||
-      !toTime
-    ) {
-
-      alert("⚠ Please select all fields");
-
-      return;
-    }
-
     setLoading(true);
 
     try {
+      const report = await getReport();
+      if (!report) return;
 
-      const {
-        filtered,
-        avgVoltage,
-        avgCurrent,
-        avgPower,
-        totalEnergy,
-      } = await generateReport();
+      const { filtered, avgVoltage, avgCurrent, avgPower, totalEnergy } =
+        report;
 
-      /* ================= PDF ================= */
       const doc = new jsPDF();
 
-doc.setFontSize(20);
-doc.text("NEX VOLT SMART REPORT", 14, 20);
-
-doc.setFontSize(12);
-doc.text(`FROM: ${fromDate} ${fromTime}`, 14, 35);
-doc.text(`TO: ${toDate} ${toTime}`, 14, 45);
-doc.text(`TOTAL RECORDS: ${filtered.length}`, 14, 60);
-doc.text(`AVG VOLTAGE: ${avgVoltage} V`, 14, 70);
-doc.text(`AVG CURRENT: ${avgCurrent} A`, 14, 80);
-doc.text(`AVG POWER: ${avgPower} W`, 14, 90);
-doc.text(`TOTAL ENERGY: ${totalEnergy.toFixed(3)} kWh`, 14, 100);
-
-autoTable(doc, {
-  startY: 115,
-  head: [[
-    "Date",
-    "Time",
-    "Voltage",
-    "Current",
-    "Power",
-    "Energy",
-    "Water Flow",
-    "Water Level",
-  ]],
-  body: filtered.map((item) => [
-    item.date,
-    item.time,
-    `${item.voltage} V`,
-    `${item.current} A`,
-    `${item.power} W`,
-    `${item.energy} kWh`,
-    `${item.waterFlow || 0} L/min`,
-    `${item.waterLevel || 0} cm`,
-  ]),
-});
-
-doc.save(`NexVolt_Report_${timestamp}.pdf`);
-      
-
       doc.setFontSize(20);
-
-      doc.text(
-        "NEX VOLT SMART REPORT",
-        14,
-        20
-      );
+      doc.text("NEX VOLT SMART REPORT", 14, 20);
 
       doc.setFontSize(12);
-
-      doc.text(
-        `FROM: ${fromDate} ${fromTime}`,
-        14,
-        35
-      );
-
-      doc.text(
-        `TO: ${toDate} ${toTime}`,
-        14,
-        45
-      );
-
-      doc.text(
-        `TOTAL RECORDS: ${filtered.length}`,
-        14,
-        60
-      );
-
-      doc.text(
-        `AVG VOLTAGE: ${avgVoltage} V`,
-        14,
-        70
-      );
-
-      doc.text(
-        `AVG CURRENT: ${avgCurrent} A`,
-        14,
-        80
-      );
-
-      doc.text(
-        `AVG POWER: ${avgPower} W`,
-        14,
-        90
-      );
-
-      doc.text(
-        `TOTAL ENERGY: ${totalEnergy.toFixed(
-          3
-        )} kWh`,
-        14,
-        100
-      );
-
-      /* ================= TABLE ================= */
+      doc.text(`FROM: ${fromDate} ${fromTime}`, 14, 35);
+      doc.text(`TO: ${toDate} ${toTime}`, 14, 45);
+      doc.text(`TOTAL RECORDS: ${filtered.length}`, 14, 60);
+      doc.text(`AVG VOLTAGE: ${avgVoltage} V`, 14, 70);
+      doc.text(`AVG CURRENT: ${avgCurrent} A`, 14, 80);
+      doc.text(`AVG POWER: ${avgPower} W`, 14, 90);
+      doc.text(`TOTAL ENERGY: ${totalEnergy.toFixed(3)} kWh`, 14, 100);
 
       autoTable(doc, {
         startY: 115,
-
-        head: [[
-          "Date",
-          "Time",
-          "Voltage",
-          "Current",
-          "Power",
-          "Energy",
-          "Water Flow",
-          "Water Level",
-        ]],
-
-        body: filtered.map(
-          (item) => [
-            item.date,
-            item.time,
-            `${item.voltage} V`,
-            `${item.current} A`,
-            `${item.power} W`,
-            `${item.energy} kWh`,
-            `${item.waterFlow || 0} L/min`,
-            `${item.waterLevel || 0} cm`,
-          ]
-        ),
+        head: [
+          [
+            "Date",
+            "Time",
+            "Voltage",
+            "Current",
+            "Power",
+            "Energy",
+            "Water Flow",
+            "Water Level",
+          ],
+        ],
+        body: filtered.map((item) => [
+          item.date || "",
+          item.time || "",
+          `${item.voltage || 0} V`,
+          `${item.current || 0} A`,
+          `${item.power || 0} W`,
+          `${item.energy || 0} kWh`,
+          `${item.waterFlow || 0} L/min`,
+          `${item.waterLevel || 0} cm`,
+        ]),
       });
-const getStats = (items, key) => {
-  const values = items
-    .map((item) => Number(item[key] || 0))
-    .filter((value) => !Number.isNaN(value));
 
-  if (values.length === 0) {
-    return {
-      min: 0,
-      max: 0,
-      avg: 0,
-    };
-  }
-
-  return {
-    min: Math.min(...values),
-    max: Math.max(...values),
-    avg:
-      values.reduce((sum, value) => sum + value, 0) /
-      values.length,
-  };
-};
-      const timestamp =
-        new Date()
-          .toISOString()
-          .replace(/[:.]/g, "-");
-
-      doc.save(
-        `NexVolt_Report_${timestamp}.pdf`
-      );
-
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      doc.save(`NexVolt_Report_${timestamp}.pdf`);
     } catch (error) {
-
       console.log(error);
-
-      alert(
-        "❌ Error generating PDF report"
-      );
+      alert("Error generating PDF report");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
-
     <div style={styles.container}>
-
       {/* ================= HEADER ================= */}
 
       <div style={styles.header}>
+        <FaChartBar size={35} color="cyan" />
 
-        <FaChartBar
-          size={35}
-          color="cyan"
-        />
-
-        <h1 style={styles.title}>
-          Reports Center
-        </h1>
-
+        <h1 style={styles.title}>Reports Center</h1>
       </div>
 
       {/* ================= CARD ================= */}
 
       <div style={styles.card}>
-
         {/* FROM DATE */}
 
         <div style={styles.inputGroup}>
-
           <label style={styles.label}>
             <FaCalendarAlt />
             From Date
@@ -474,20 +288,14 @@ const getStats = (items, key) => {
           <input
             type="date"
             value={fromDate}
-            onChange={(e) =>
-              setFromDate(
-                e.target.value
-              )
-            }
+            onChange={(e) => setFromDate(e.target.value)}
             style={styles.input}
           />
-
         </div>
 
         {/* TO DATE */}
 
         <div style={styles.inputGroup}>
-
           <label style={styles.label}>
             <FaCalendarAlt />
             To Date
@@ -496,20 +304,14 @@ const getStats = (items, key) => {
           <input
             type="date"
             value={toDate}
-            onChange={(e) =>
-              setToDate(
-                e.target.value
-              )
-            }
+            onChange={(e) => setToDate(e.target.value)}
             style={styles.input}
           />
-
         </div>
 
         {/* FROM TIME */}
 
         <div style={styles.inputGroup}>
-
           <label style={styles.label}>
             <FaClock />
             From Time
@@ -518,20 +320,14 @@ const getStats = (items, key) => {
           <input
             type="time"
             value={fromTime}
-            onChange={(e) =>
-              setFromTime(
-                e.target.value
-              )
-            }
+            onChange={(e) => setFromTime(e.target.value)}
             style={styles.input}
           />
-
         </div>
 
         {/* TO TIME */}
 
         <div style={styles.inputGroup}>
-
           <label style={styles.label}>
             <FaClock />
             To Time
@@ -540,14 +336,9 @@ const getStats = (items, key) => {
           <input
             type="time"
             value={toTime}
-            onChange={(e) =>
-              setToTime(
-                e.target.value
-              )
-            }
+            onChange={(e) => setToTime(e.target.value)}
             style={styles.input}
           />
-
         </div>
 
         {/* TXT BUTTON */}
@@ -555,14 +346,11 @@ const getStats = (items, key) => {
         <button
           onClick={handleDownloadTXT}
           style={styles.button}
+          disabled={loading}
         >
-
           <FaFileDownload />
 
-          {loading
-            ? "Generating..."
-            : "Download TXT Report"}
-
+          {loading ? "Generating..." : "Download TXT Report"}
         </button>
 
         {/* PDF BUTTON */}
@@ -574,45 +362,32 @@ const getStats = (items, key) => {
             marginTop: "15px",
             background: "#ef4444",
           }}
+          disabled={loading}
         >
-
           <FaFilePdf />
 
-          Download PDF Report
-
+          {loading ? "Generating..." : "Download PDF Report"}
         </button>
-
       </div>
 
       {/* ================= PREVIEW ================= */}
 
       {preview && (
-
         <div style={styles.previewCard}>
+          <h2 style={styles.previewTitle}>Report Preview</h2>
 
-          <h2 style={styles.previewTitle}>
-            📄 Report Preview
-          </h2>
-
-          <pre style={styles.preview}>
-            {preview}
-          </pre>
-
+          <pre style={styles.preview}>{preview}</pre>
         </div>
-
       )}
-
     </div>
   );
 }
 
 const styles = {
-
   container: {
     minHeight: "100vh",
     padding: "40px",
-    background:
-      "linear-gradient(to right, #0f172a, #1e293b)",
+    background: "linear-gradient(to right, #0f172a, #1e293b)",
     color: "white",
   },
 
@@ -630,13 +405,11 @@ const styles = {
 
   card: {
     maxWidth: "650px",
-    background:
-      "rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.08)",
     padding: "30px",
     borderRadius: "20px",
     backdropFilter: "blur(10px)",
-    boxShadow:
-      "0 0 20px rgba(0,255,255,0.25)",
+    boxShadow: "0 0 20px rgba(0,255,255,0.25)",
     marginBottom: "30px",
   },
 
@@ -678,8 +451,7 @@ const styles = {
   },
 
   previewCard: {
-    background:
-      "rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.08)",
     padding: "25px",
     borderRadius: "20px",
     backdropFilter: "blur(10px)",
