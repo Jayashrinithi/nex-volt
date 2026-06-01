@@ -1,19 +1,19 @@
 {
   "files": {
     "main.css": "/nex-volt/static/css/main.bcff6cfe.css",
-    "main.js": "/nex-volt/static/js/main.3aafa443.js",
+    "main.js": "/nex-volt/static/js/main.1e208706.js",
     "static/js/239.6d65e8be.chunk.js": "/nex-volt/static/js/239.6d65e8be.chunk.js",
     "static/js/977.adc63088.chunk.js": "/nex-volt/static/js/977.adc63088.chunk.js",
     "static/js/455.9b2ccdf1.chunk.js": "/nex-volt/static/js/455.9b2ccdf1.chunk.js",
     "index.html": "/nex-volt/index.html",
     "main.bcff6cfe.css.map": "/nex-volt/static/css/main.bcff6cfe.css.map",
-    "main.3aafa443.js.map": "/nex-volt/static/js/main.3aafa443.js.map",
+    "main.1e208706.js.map": "/nex-volt/static/js/main.1e208706.js.map",
     "239.6d65e8be.chunk.js.map": "/nex-volt/static/js/239.6d65e8be.chunk.js.map",
     "977.adc63088.chunk.js.map": "/nex-volt/static/js/977.adc63088.chunk.js.map",
     "455.9b2ccdf1.chunk.js.map": "/nex-volt/static/js/455.9b2ccdf1.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.bcff6cfe.css",
-    "static/js/main.3aafa443.js"
+    "static/js/main.1e208706.js"
   ]
 }
