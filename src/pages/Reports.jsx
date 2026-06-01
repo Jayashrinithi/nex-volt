@@ -25,15 +25,56 @@ function Reports() {
   const parseDateTime = (dateValue, timeValue) => {
     if (!dateValue || !timeValue) return null;
 
-    let normalizedDate = dateValue;
+    const dateText = String(dateValue).trim();
+    const timeText = String(timeValue).trim();
 
-    // Firebase records may be saved as dd-mm-yyyy or dd/mm/yyyy.
-    if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(dateValue)) {
-      const [day, month, year] = dateValue.split(/[-/]/);
-      normalizedDate = `${year}-${month}-${day}`;
+    if (
+      dateText.includes("--") ||
+      timeText.includes("--")
+    ) {
+      return null;
     }
 
-    const parsed = new Date(`${normalizedDate}T${timeValue}`);
+    let year;
+    let month;
+    let day;
+
+    if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(dateText)) {
+      [year, month, day] = dateText.split("-").map(Number);
+    } else if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(dateText)) {
+      [day, month, year] = dateText.split(/[-/]/).map(Number);
+    } else {
+      return null;
+    }
+
+    const timeMatch = timeText.match(
+      /^(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?\s*(am|pm)?$/i
+    );
+
+    if (!timeMatch) return null;
+
+    let hour = Number(timeMatch[1]);
+    const minute = Number(timeMatch[2] || 0);
+    const second = Number(timeMatch[3] || 0);
+    const meridiem = timeMatch[4]?.toLowerCase();
+
+    if (meridiem === "pm" && hour < 12) {
+      hour += 12;
+    }
+
+    if (meridiem === "am" && hour === 12) {
+      hour = 0;
+    }
+
+    const parsed = new Date(
+      year,
+      month - 1,
+      day,
+      hour,
+      minute,
+      second
+    );
+
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
