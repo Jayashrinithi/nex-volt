@@ -137,29 +137,6 @@ useEffect(() => {
         setLastUpdated(
           now.toLocaleTimeString()
         );
-const [demoMode, setDemoMode] = useState(false);
-useEffect(() => {
-  if (!demoMode) return;
-
-  const interval = setInterval(() => {
-    setData({
-      voltage: 220 + Math.random() * 20,
-      current: 1 + Math.random() * 5,
-      power: 300 + Math.random() * 800,
-      energy: Math.random() * 5,
-      waterFlow: 2 + Math.random() * 10,
-      waterLevel: 5 + Math.random() * 12,
-      relay: Math.random() > 0.5,
-    });
-
-    setLastUpdated(new Date().toLocaleTimeString());
-  }, 1000);
-
-  return () => clearInterval(interval);
-}, [demoMode]);
-<button onClick={() => setDemoMode(!demoMode)}>
-  {demoMode ? "Stop Demo" : "Start Demo"}
-</button>
         // ================= ALERT CHECK =================
 
         const result = checkAlerts(formattedData);
@@ -171,25 +148,22 @@ setStatus(result.status);
           lastAlertsRef.current;
 
         const hasNewAlerts =
-          JSON.stringify(previousAlerts) !==
-          JSON.stringify(newAlerts);
+  JSON.stringify(previousAlerts) !==
+  JSON.stringify(result.alerts);
 
-        if (
-          newAlerts.length > 0 &&
-          hasNewAlerts
-        ) {
+if (
+  result.alerts.length > 0 &&
+  hasNewAlerts
+) {
+  playSound();
 
-          playSound();
+  result.alerts.forEach((msg) => {
+    showPopup(msg);
+  });
+}
 
-          newAlerts.forEach((msg) => {
-
-            showPopup(msg);
-
-          });
-        }
-
-        lastAlertsRef.current =
-          newAlerts;
+lastAlertsRef.current =
+  result.alerts;
       }
     );
 
@@ -365,11 +339,16 @@ border:
     >
 
       <div
-        style={{
-          ...styles.iconBox,
-          background: glow,
-        }}
-      >
+  style={{
+    ...styles.iconBox,
+    background:
+      status === "danger"
+        ? "#ef4444"
+        : status === "warning"
+        ? "#f97316"
+        : "#06b6d4",
+  }}
+>
         {icon}
       </div>
 

@@ -273,42 +273,8 @@ ${totalEnergy.toFixed(3)} kWh
       } = await generateReport();
 
       /* ================= PDF ================= */
-autoTable(doc, {
-  startY: 65,
-  head: [["Parameter", "Min", "Max", "Average"]],
-  body: [
-    [
-      "Voltage",
-      `${voltageStats.min.toFixed(2)} V`,
-      `${voltageStats.max.toFixed(2)} V`,
-      `${voltageStats.avg.toFixed(2)} V`,
-    ],
-    [
-      "Current",
-      `${currentStats.min.toFixed(2)} A`,
-      `${currentStats.max.toFixed(2)} A`,
-      `${currentStats.avg.toFixed(2)} A`,
-    ],
-    [
-      "Power",
-      `${powerStats.min.toFixed(2)} W`,
-      `${powerStats.max.toFixed(2)} W`,
-      `${powerStats.avg.toFixed(2)} W`,
-    ],
-    [
-      "Water Flow",
-      `${waterFlowStats.min.toFixed(2)} L/min`,
-      `${waterFlowStats.max.toFixed(2)} L/min`,
-      `${waterFlowStats.avg.toFixed(2)} L/min`,
-    ],
-    [
-      "Water Level",
-      `${waterLevelStats.min.toFixed(2)} cm`,
-      `${waterLevelStats.max.toFixed(2)} cm`,
-      `${waterLevelStats.avg.toFixed(2)} cm`,
-    ],
-  ],
-});
+      const doc =
+        new jsPDF();
 autoTable(doc, {
   startY: doc.lastAutoTable.finalY + 15,
   head: [[
@@ -332,8 +298,7 @@ autoTable(doc, {
     `${item.waterLevel || 0} cm`,
   ]),
 });
-      const doc =
-        new jsPDF();
+      
 
       doc.setFontSize(20);
 
@@ -626,13 +591,6 @@ const getStats = (items, key) => {
     </div>
   );
 }
-const voltageStats = getStats(filtered, "voltage");
-const currentStats = getStats(filtered, "current");
-const powerStats = getStats(filtered, "power");
-const energyStats = getStats(filtered, "energy");
-const waterFlowStats = getStats(filtered, "waterFlow");
-const waterLevelStats = getStats(filtered, "waterLevel");
-/* ================= STYLES ================= */
 
 const styles = {
 
