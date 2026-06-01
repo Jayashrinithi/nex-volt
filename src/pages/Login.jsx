@@ -55,9 +55,19 @@ function Login() {
       alert("Signup Successful");
       navigate("/dashboard");
     }
-  } catch (error) {
+ } catch (error) {
+  if (error.code === "auth/operation-not-allowed") {
+    alert("Email/password login is not enabled in Firebase Authentication.");
+  } else if (error.code === "auth/email-already-in-use") {
+    alert("This email is already registered. Please login.");
+  } else if (error.code === "auth/invalid-credential") {
+    alert("Invalid email or password.");
+  } else if (error.code === "auth/weak-password") {
+    alert("Password must be at least 6 characters.");
+  } else {
     alert(error.message);
-  } finally {
+  }
+} finally {
     setLoading(false);
   }
 };
