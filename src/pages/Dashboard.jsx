@@ -8,17 +8,12 @@ import {
   FaBatteryHalf,
   FaWater,
   FaExclamationTriangle,
-  FaToggleOn,
-  FaToggleOff,
   FaRulerVertical,
 } from "react-icons/fa";
 
 import { checkAlerts } from "../utils/checkAlerts";
 
 function Dashboard() {
-
-  // ================= STATES =================
-
   const [data, setData] = useState({
     voltage: 0,
     current: 0,
@@ -30,230 +25,211 @@ function Dashboard() {
   });
 
   const [alerts, setAlerts] = useState([]);
-const [status, setStatus] = useState({});
-  const [lastUpdated, setLastUpdated] =
-    useState("--:--");
+  const [status, setStatus] = useState({});
+  const [lastUpdated, setLastUpdated] = useState("--:--");
 
-  const lastAlertsRef = useRef([]);
-// ================= THEME =================
-
-const [darkMode, setDarkMode] = useState(
-  JSON.parse(localStorage.getItem("settings"))
-    ?.darkMode ?? true
-);
-
-useEffect(() => {
-  const updateTheme = () => {
-    const saved = JSON.parse(
-      localStorage.getItem("settings")
-    );
-
-    setDarkMode(saved?.darkMode ?? true);
-  };
-
-  window.addEventListener(
-    "settingsChanged",
-    updateTheme
+  const [darkMode, setDarkMode] = useState(
+    JSON.parse(localStorage.getItem("settings"))
+      ?.darkMode ?? true
   );
 
-  return () => {
-    window.removeEventListener(
-      "settingsChanged",
-      updateTheme
-    );
+  const lastAlertsRef = useRef([]);
+
+  const getSavedSettings = () => {
+    try {
+      return (
+        JSON.parse(localStorage.getItem("settings")) || {}
+      );
+    } catch {
+      return {};
+    }
   };
-}, []);
-  // ================= SOUND =================
+
+  const requestNotificationPermission = () => {
+    const savedSettings = getSavedSettings();
+
+    if (
+      savedSettings.notificationEnabled !== false &&
+      "Notification" in window &&
+      Notification.permission === "default"
+    ) {
+      Notification.requestPermission();
+    }
+  };
+
+  useEffect(() => {
+    const updateSettings = () => {
+      const saved = getSavedSettings();
+
+      setDarkMode(saved?.darkMode ?? true);
+
+      if (saved.alertsEnabled === false) {
+        setAlerts([]);
+        lastAlertsRef.current = [];
+      }
+
+      requestNotificationPermission();
+    };
+
+    updateSettings();
+
+    window.addEventListener(
+      "settingsChanged",
+      updateSettings
+    );
+
+    return () => {
+      window.removeEventListener(
+        "settingsChanged",
+        updateSettings
+      );
+    };
+  }, []);
 
   const playSound = () => {
-
     const audio = new Audio(
-  process.env.PUBLIC_URL + "/alert.mp3"
-);
+      process.env.PUBLIC_URL + "/alert.mp3"
+    );
 
     audio.play().catch(() => {
       console.log("Sound blocked");
     });
   };
 
-  // ================= POPUP =================
-
   const showPopup = (message) => {
-
     if (!("Notification" in window)) return;
 
     if (Notification.permission === "granted") {
-
-      new Notification("⚠ IoT Alert", {
+      new Notification("IoT Alert", {
         body: message,
         icon: process.env.PUBLIC_URL + "/logo192.png",
       });
     }
   };
 
-  // ================= NOTIFICATION =================
-
   useEffect(() => {
-
-    if ("Notification" in window) {
-
-      Notification.requestPermission();
-    }
-
-  }, []);
-
-  // ================= FIREBASE LIVE DATA =================
-
-  useEffect(() => {
-
     const sensorRef = ref(db, "liveData");
 
-    const unsubscribe = onValue(
-      sensorRef,
-      (snapshot) => {
+    const unsubscribe = onValue(sensorRef, (snapshot) => {
+      const firebaseData = snapshot.val();
 
-        const firebaseData = snapshot.val();
+      if (!firebaseData) return;
 
-        if (!firebaseData) return;
+      const formattedData = {
+        voltage: Number(firebaseData.voltage ?? 0),
+        current: Number(firebaseData.current ?? 0),
+        power: Number(firebaseData.power ?? 0),
+        energy: Number(firebaseData.energy ?? 0),
+        waterFlow: Number(firebaseData.waterFlow ?? 0),
+        waterLevel: Number(firebaseData.waterLevel ?? 0),
+        relay: false,
+      };
 
-       const formattedData = {
-  voltage: Number(firebaseData.voltage ?? 0),
-  current: Number(firebaseData.current ?? 0),
-  power: Number(firebaseData.power ?? 0),
-  energy: Number(firebaseData.energy ?? 0),
-  waterFlow: Number(firebaseData.waterFlow ?? 0),
-  waterLevel: Number(firebaseData.waterLevel ?? 0),
+      setData(formattedData);
+      setLastUpdated(new Date().toLocaleTimeString());
 
-  // relay not present in current Firebase structure
-  relay: false,
-};
+      const savedSettings = getSavedSettings();
 
-        // LIVE UPDATE
-        setData(formattedData);
+      const result = checkAlerts(
+        formattedData,
+        savedSettings
+      );
 
-        // TIME
-        const now = new Date();
+      setStatus(result.status);
 
-        setLastUpdated(
-          now.toLocaleTimeString()
-        );
-        // ================= ALERT CHECK =================
-
-        const result = checkAlerts(formattedData);
-
-setAlerts(result.alerts);
-setStatus(result.status);
-
-        const previousAlerts =
-          lastAlertsRef.current;
-
-        const hasNewAlerts =
-  JSON.stringify(previousAlerts) !==
-  JSON.stringify(result.alerts);
-
-if (
-  result.alerts.length > 0 &&
-  hasNewAlerts
-) {
-  playSound();
-
-  result.alerts.forEach((msg) => {
-    showPopup(msg);
-  });
-}
-
-lastAlertsRef.current =
-  result.alerts;
+      if (savedSettings.alertsEnabled === false) {
+        setAlerts([]);
+        lastAlertsRef.current = [];
+        return;
       }
-    );
+
+      setAlerts(result.alerts);
+
+      const previousAlerts = lastAlertsRef.current;
+
+      const hasNewAlerts =
+        JSON.stringify(previousAlerts) !==
+        JSON.stringify(result.alerts);
+
+      if (
+        result.alerts.length > 0 &&
+        hasNewAlerts
+      ) {
+        if (savedSettings.soundEnabled !== false) {
+          playSound();
+        }
+
+        if (
+          savedSettings.notificationEnabled !== false
+        ) {
+          result.alerts.forEach((msg) => {
+            showPopup(msg);
+          });
+        }
+      }
+
+      lastAlertsRef.current = result.alerts;
+    });
 
     return () => unsubscribe();
-
   }, []);
 
   return (
-<div
-  style={{
-    ...styles.container,
-    background: darkMode
-      ? "linear-gradient(to right, #0f172a, #1e293b)"
-      : "linear-gradient(to right, #e2e8f0, #f8fafc)",
-    color: darkMode ? "white" : "#0f172a",
-  }}
->
-
-      {/* ================= HEADER ================= */}
-
+    <div
+      style={{
+        ...styles.container,
+        background: darkMode
+          ? "linear-gradient(to right, #0f172a, #1e293b)"
+          : "linear-gradient(to right, #e2e8f0, #f8fafc)",
+        color: darkMode ? "white" : "#0f172a",
+      }}
+    >
       <div style={styles.header}>
-
         <div>
-
           <h1 style={styles.title}>
-            ⚡ NEX VOLT DASHBOARD
+            NEX VOLT DASHBOARD
           </h1>
 
           <p style={styles.subTitle}>
             Real-Time IoT Monitoring System
           </p>
-
         </div>
 
         <div style={styles.statusBox}>
-
           <div style={styles.statusDot}></div>
 
           <div>
-
             <p style={styles.statusText}>
               System Online
             </p>
 
             <span style={styles.updateText}>
-              Updated:
-              {" "}
-              {lastUpdated}
+              Updated: {lastUpdated}
             </span>
-
           </div>
-
         </div>
-
       </div>
 
-      {/* ================= ALERTS ================= */}
-
       {alerts.length > 0 && (
-
         <div style={styles.alertBox}>
-
           <div style={styles.alertTitle}>
-
             <FaExclamationTriangle />
 
-            <span>
-              Alerts Detected
-            </span>
-
+            <span>Alerts Detected</span>
           </div>
 
           {alerts.map((alert, index) => (
-
             <div
               key={index}
               style={styles.alertText}
             >
               {alert}
             </div>
-
           ))}
-
         </div>
       )}
 
-      {/* ================= CARDS ================= */}
-
       <div style={styles.grid}>
-
         <Card
           icon={<FaBolt />}
           title="Voltage"
@@ -288,67 +264,62 @@ lastAlertsRef.current =
           value={`${data.waterFlow.toFixed(2)} L/min`}
           status={status.waterFlow}
         />
-        <Card
-  icon={<FaRulerVertical />}
-  title="Water Level"
-  value={`${data.waterLevel.toFixed(1)} cm`}
-  status={status.waterLevel}
-/>
-      </div>
 
+        <Card
+          icon={<FaRulerVertical />}
+          title="Water Level"
+          value={`${data.waterLevel.toFixed(1)} cm`}
+          status={status.waterLevel}
+        />
+      </div>
     </div>
   );
 }
-
-/* ================= CARD ================= */
 
 function Card({
   icon,
   title,
   value,
   status = "normal",
-}){
-
+}) {
   return (
-
     <div
       style={{
         ...styles.card,
 
         background:
-  status === "danger"
-    ? "rgba(255,0,0,0.25)"
-    : status === "warning"
-    ? "rgba(255,165,0,0.25)"
-    : "rgba(0,255,255,0.15)",
+          status === "danger"
+            ? "rgba(255,0,0,0.25)"
+            : status === "warning"
+            ? "rgba(255,165,0,0.25)"
+            : "rgba(0,255,255,0.15)",
 
-boxShadow:
-  status === "danger"
-    ? "0 0 25px red"
-    : status === "warning"
-    ? "0 0 25px orange"
-    : "0 0 25px cyan",
+        boxShadow:
+          status === "danger"
+            ? "0 0 25px red"
+            : status === "warning"
+            ? "0 0 25px orange"
+            : "0 0 25px cyan",
 
-border:
-  status === "danger"
-    ? "2px solid red"
-    : status === "warning"
-    ? "2px solid orange"
-    : "2px solid cyan",
+        border:
+          status === "danger"
+            ? "2px solid red"
+            : status === "warning"
+            ? "2px solid orange"
+            : "2px solid cyan",
       }}
     >
-
       <div
-  style={{
-    ...styles.iconBox,
-    background:
-      status === "danger"
-        ? "#ef4444"
-        : status === "warning"
-        ? "#f97316"
-        : "#06b6d4",
-  }}
->
+        style={{
+          ...styles.iconBox,
+          background:
+            status === "danger"
+              ? "#ef4444"
+              : status === "warning"
+              ? "#f97316"
+              : "#06b6d4",
+        }}
+      >
         {icon}
       </div>
 
@@ -361,31 +332,26 @@ border:
       </h1>
 
       {status === "danger" && (
-  <p style={styles.warning}>
-    🚨 Danger
-  </p>
-)}
+        <p style={styles.warning}>
+          Danger
+        </p>
+      )}
 
-{status === "warning" && (
-  <p style={{ color: "orange" }}>
-    ⚠ Warning
-  </p>
-)}
-
+      {status === "warning" && (
+        <p style={{ color: "orange" }}>
+          Warning
+        </p>
+      )}
     </div>
   );
 }
 
-/* ================= STYLES ================= */
-
 const styles = {
-
   container: {
     minHeight: "100vh",
     padding: "30px",
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
-
     color: "white",
   },
 
@@ -413,16 +379,10 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-
-    background:
-      "rgba(255,255,255,0.08)",
-
+    background: "rgba(255,255,255,0.08)",
     padding: "14px 22px",
-
     borderRadius: "15px",
-
-    boxShadow:
-      "0 0 15px rgba(0,255,255,0.2)",
+    boxShadow: "0 0 15px rgba(0,255,255,0.2)",
   },
 
   statusDot: {
@@ -430,9 +390,7 @@ const styles = {
     height: "14px",
     borderRadius: "50%",
     background: "#22c55e",
-
-    boxShadow:
-      "0 0 15px #22c55e",
+    boxShadow: "0 0 15px #22c55e",
   },
 
   statusText: {
@@ -448,28 +406,19 @@ const styles = {
   alertBox: {
     background: "rgba(255,0,0,0.1)",
     border: "1px solid red",
-
     borderRadius: "16px",
-
     padding: "20px",
-
     marginBottom: "30px",
-
-    boxShadow:
-      "0 0 15px rgba(255,0,0,0.3)",
+    boxShadow: "0 0 15px rgba(255,0,0,0.3)",
   },
 
   alertTitle: {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-
     color: "#ff4d4f",
-
     fontSize: "22px",
-
     marginBottom: "15px",
-
     fontWeight: "bold",
   },
 
@@ -481,42 +430,29 @@ const styles = {
 
   grid: {
     display: "grid",
-
     gridTemplateColumns:
       "repeat(auto-fit, minmax(250px, 1fr))",
-
     gap: "25px",
   },
 
   card: {
-    background:
-      "rgba(255,255,255,0.08)",
-
+    background: "rgba(255,255,255,0.08)",
     padding: "28px",
-
     borderRadius: "22px",
-
     backdropFilter: "blur(10px)",
-
     transition: "0.3s",
-
     position: "relative",
   },
 
   iconBox: {
     width: "70px",
     height: "70px",
-
     borderRadius: "18px",
-
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-
     fontSize: "32px",
-
     color: "#0f172a",
-
     marginBottom: "20px",
   },
 

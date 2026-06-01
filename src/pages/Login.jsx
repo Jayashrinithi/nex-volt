@@ -35,73 +35,32 @@ function Login() {
   const [loading, setLoading] =
     useState(false);
 
-  const [remember, setRemember] =
-    useState(false);
 
   // ================= SUBMIT =================
 
   const handleSubmit = async () => {
+  if (!email || !password) {
+    alert("Please fill all fields");
+    return;
+  }
 
-    if (!email || !password) {
+  setLoading(true);
 
-      alert("⚠ Please fill all fields");
-
-      return;
+  try {
+    if (isLogin) {
+      await Auth.login(email, password);
+      navigate("/dashboard");
+    } else {
+      await Auth.signup(email, password);
+      alert("Signup Successful");
+      navigate("/dashboard");
     }
-
-    setLoading(true);
-
-    setTimeout(() => {
-
-      if (isLogin) {
-
-        const success =
-          Auth.login(
-            email,
-            password,
-            () => {
-
-              // save session
-              if (remember) {
-
-                localStorage.setItem(
-                  "rememberUser",
-                  "true"
-                );
-              }
-
-              // redirect
-              navigate("/dashboard");
-            }
-          );
-
-        if (!success) {
-
-          alert(
-            "❌ Invalid email or password"
-          );
-        }
-
-      } else {
-
-        Auth.signup(
-          email,
-          password,
-          () => {
-
-            alert(
-              "✅ Signup Successful"
-            );
-
-            navigate("/dashboard");
-          }
-        );
-      }
-
-      setLoading(false);
-
-    }, 1200);
-  };
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
 
@@ -194,25 +153,6 @@ function Login() {
 
         </div>
 
-        {/* REMEMBER */}
-
-        <div style={styles.rememberRow}>
-
-          <label style={styles.checkboxLabel}>
-
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={() =>
-                setRemember(!remember)
-              }
-            />
-
-            Remember Me
-
-          </label>
-
-        </div>
 
         {/* BUTTON */}
 
@@ -373,20 +313,6 @@ const styles = {
     color: "#cbd5e1",
     cursor: "pointer",
     fontSize: "18px",
-  },
-
-  rememberRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "25px",
-    color: "#cbd5e1",
-    fontSize: "14px",
-  },
-
-  checkboxLabel: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
   },
 
   button: {

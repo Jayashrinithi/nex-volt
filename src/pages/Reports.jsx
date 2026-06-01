@@ -273,10 +273,22 @@ ${totalEnergy.toFixed(3)} kWh
       } = await generateReport();
 
       /* ================= PDF ================= */
-      const doc =
-        new jsPDF();
+      const doc = new jsPDF();
+
+doc.setFontSize(20);
+doc.text("NEX VOLT SMART REPORT", 14, 20);
+
+doc.setFontSize(12);
+doc.text(`FROM: ${fromDate} ${fromTime}`, 14, 35);
+doc.text(`TO: ${toDate} ${toTime}`, 14, 45);
+doc.text(`TOTAL RECORDS: ${filtered.length}`, 14, 60);
+doc.text(`AVG VOLTAGE: ${avgVoltage} V`, 14, 70);
+doc.text(`AVG CURRENT: ${avgCurrent} A`, 14, 80);
+doc.text(`AVG POWER: ${avgPower} W`, 14, 90);
+doc.text(`TOTAL ENERGY: ${totalEnergy.toFixed(3)} kWh`, 14, 100);
+
 autoTable(doc, {
-  startY: doc.lastAutoTable.finalY + 15,
+  startY: 115,
   head: [[
     "Date",
     "Time",
@@ -298,6 +310,8 @@ autoTable(doc, {
     `${item.waterLevel || 0} cm`,
   ]),
 });
+
+doc.save(`NexVolt_Report_${timestamp}.pdf`);
       
 
       doc.setFontSize(20);
@@ -597,7 +611,6 @@ const styles = {
   container: {
     minHeight: "100vh",
     padding: "40px",
-    marginLeft: "260px",
     background:
       "linear-gradient(to right, #0f172a, #1e293b)",
     color: "white",

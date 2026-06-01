@@ -1,152 +1,72 @@
-export const Auth = {
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updatePassword,
+} from "firebase/auth";
 
+import { auth } from "./services/firebase";
+
+export const Auth = {
   // =========================
   // SIGNUP
   // =========================
 
-  signup(email, password, cb) {
-
+  signup(email, password) {
     if (!email || !password) {
-
-      alert("⚠ Please fill all fields");
-
-      return false;
+      return Promise.reject(
+        new Error("Please fill all fields")
+      );
     }
 
-    // get users array
-    const users =
-      JSON.parse(
-        localStorage.getItem("users")
-      ) || [];
-
-    // check existing user
-    const existingUser =
-      users.find(
-        (u) => u.email === email
-      );
-
-    if (existingUser) {
-
-      alert(
-        "⚠ User already exists. Please login."
-      );
-
-      return false;
-    }
-
-    // create new user
-    const newUser = {
-
+    return createUserWithEmailAndPassword(
+      auth,
       email,
-      password, // demo only
-
-      createdAt:
-        new Date().toISOString(),
-    };
-
-    // save user
-    users.push(newUser);
-
-    localStorage.setItem(
-      "users",
-      JSON.stringify(users)
+      password
     );
-
-    // login automatically
-    localStorage.setItem(
-      "isLoggedIn",
-      "true"
-    );
-
-    localStorage.setItem(
-      "currentUser",
-      email
-    );
-
-    cb?.();
-
-    return true;
   },
 
   // =========================
   // LOGIN
   // =========================
 
-  login(email, password, cb) {
-
+  login(email, password) {
     if (!email || !password) {
-
-      alert(
-        "⚠ Please enter email and password"
+      return Promise.reject(
+        new Error("Please enter email and password")
       );
-
-      return false;
     }
 
-    const users =
-      JSON.parse(
-        localStorage.getItem("users")
-      ) || [];
-
-    // find matching user
-    const matchedUser =
-      users.find(
-        (u) =>
-          u.email === email &&
-          u.password === password
-      );
-
-    if (!matchedUser) {
-
-      alert(
-        "❌ Invalid email or password"
-      );
-
-      return false;
-    }
-
-    // session
-    localStorage.setItem(
-      "isLoggedIn",
-      "true"
+    return signInWithEmailAndPassword(
+      auth,
+      email,
+      password
     );
-
-    localStorage.setItem(
-      "currentUser",
-      email
-    );
-
-    cb?.();
-
-    return true;
   },
 
   // =========================
-// LOGOUT
-// =========================
-logout(cb) {
+  // LOGOUT
+  // =========================
 
-  // remove login session only
-  localStorage.removeItem("isLoggedIn");
-  localStorage.removeItem("currentUser");
+  logout() {
+    return signOut(auth);
+  },
 
-  // force app refresh
-  window.dispatchEvent(new Event("authChanged"));
+  // =========================
+  // AUTH LISTENER
+  // =========================
 
-  cb?.();
-},
+  onAuthChanged(callback) {
+    return onAuthStateChanged(auth, callback);
+  },
 
   // =========================
   // AUTH CHECK
   // =========================
 
   isAuthenticated() {
-
-    return (
-      localStorage.getItem(
-        "isLoggedIn"
-      ) === "true"
-    );
+    return !!auth.currentUser;
   },
 
   // =========================
@@ -154,10 +74,7 @@ logout(cb) {
   // =========================
 
   getCurrentUser() {
-
-    return localStorage.getItem(
-      "currentUser"
-    );
+    return auth.currentUser;
   },
 
   // =========================
@@ -165,49 +82,21 @@ logout(cb) {
   // =========================
 
   changePassword(newPassword) {
-
     if (!newPassword) {
-
-      return false;
-    }
-
-    const currentUser =
-      localStorage.getItem(
-        "currentUser"
+      return Promise.reject(
+        new Error("Please enter a new password")
       );
-
-    if (!currentUser) {
-
-      return false;
     }
 
-    const users =
-      JSON.parse(
-        localStorage.getItem("users")
-      ) || [];
+    if (!auth.currentUser) {
+      return Promise.reject(
+        new Error("No user is logged in")
+      );
+    }
 
-    const updatedUsers =
-      users.map((user) => {
-
-        if (
-          user.email === currentUser
-        ) {
-
-          return {
-
-            ...user,
-            password: newPassword,
-          };
-        }
-
-        return user;
-      });
-
-    localStorage.setItem(
-      "users",
-      JSON.stringify(updatedUsers)
+    return updatePassword(
+      auth.currentUser,
+      newPassword
     );
-
-    return true;
   },
 };

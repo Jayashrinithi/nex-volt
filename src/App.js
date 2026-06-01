@@ -14,12 +14,8 @@ import { Auth } from "./auth";
 
 /* ================= PROTECTED ROUTE ================= */
 
-function ProtectedRoute({ children }) {
-
-  const authenticated = Auth.isAuthenticated();
-
-  if (!authenticated) {
-
+function ProtectedRoute({ user, children }) {
+  if (!user) {
     return <Navigate to="/" replace />;
   }
 
@@ -27,10 +23,8 @@ function ProtectedRoute({ children }) {
 }
 
 function App() {
-
-  const [isLoggedIn, setIsLoggedIn] = useState(
-    Auth.isAuthenticated()
-  );
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [settings, setSettings] = useState(() => {
     return (
@@ -40,31 +34,21 @@ function App() {
     );
   });
 
-  // ================= AUTH LISTENER =================
+  // ================= FIREBASE AUTH LISTENER =================
 
   useEffect(() => {
+    const unsubscribe = Auth.onAuthChanged((firebaseUser) => {
+      setUser(firebaseUser);
+      setAuthLoading(false);
+    });
 
-    const updateAuth = () => {
-      setIsLoggedIn(Auth.isAuthenticated());
-    };
-
-    window.addEventListener("authChanged", updateAuth);
-
-    return () => {
-      window.removeEventListener(
-        "authChanged",
-        updateAuth
-      );
-    };
-
+    return unsubscribe;
   }, []);
 
   // ================= SETTINGS LISTENER =================
 
   useEffect(() => {
-
     const updateSettings = () => {
-
       const updated =
         JSON.parse(localStorage.getItem("settings"));
 
@@ -79,17 +63,33 @@ function App() {
     );
 
     return () => {
-
       window.removeEventListener(
         "settingsChanged",
         updateSettings
       );
     };
-
   }, []);
 
-  return (
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          background: settings.darkMode
+            ? "linear-gradient(to right, #0f172a, #1e293b)"
+            : "#f1f5f9",
+          color: settings.darkMode ? "white" : "black",
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
 
+  return (
     <div
       style={{
         minHeight: "100vh",
@@ -105,22 +105,24 @@ function App() {
         transition: "0.3s",
       }}
     >
+      {/* NAVBAR ONLY AFTER LOGIN */}
 
-      {/* SIDEBAR ONLY AFTER LOGIN */}
-
-      {isLoggedIn && <Navbar />}
+      {user && <Navbar />}
 
       <Routes>
-
         <Route
           path="/"
-          element={<Login />}
+          element={
+            user
+              ? <Navigate to="/dashboard" replace />
+              : <Login />
+          }
         />
 
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute user={user}>
               <Dashboard />
             </ProtectedRoute>
           }
@@ -129,7 +131,7 @@ function App() {
         <Route
           path="/analytics"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute user={user}>
               <Analytics />
             </ProtectedRoute>
           }
@@ -138,7 +140,7 @@ function App() {
         <Route
           path="/history"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute user={user}>
               <History />
             </ProtectedRoute>
           }
@@ -147,7 +149,7 @@ function App() {
         <Route
           path="/reports"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute user={user}>
               <Reports />
             </ProtectedRoute>
           }
@@ -156,14 +158,12 @@ function App() {
         <Route
           path="/settings"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute user={user}>
               <Settings />
             </ProtectedRoute>
           }
         />
-
       </Routes>
-
     </div>
   );
 }

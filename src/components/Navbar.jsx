@@ -5,10 +5,13 @@ function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const logout = () => {
-    Auth.logout(() => {
+  const logout = async () => {
+    try {
+      await Auth.logout();
       navigate("/");
-    });
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   const linkStyle = (path) => ({
@@ -36,13 +39,17 @@ function Navbar() {
         zIndex: 1000,
       }}
     >
-      {/* TITLE */}
       <h2 style={{ margin: 0, color: "#06b6d4" }}>
         Nex Volt Monitor
       </h2>
 
-      {/* LINKS */}
-      <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          alignItems: "center",
+        }}
+      >
         <Link to="/dashboard" style={linkStyle("/dashboard")}>
           Dashboard
         </Link>
@@ -63,7 +70,6 @@ function Navbar() {
           Settings
         </Link>
 
-        {/* LOGOUT */}
         <button
           onClick={logout}
           style={{

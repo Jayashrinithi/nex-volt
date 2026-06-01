@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Auth } from "../auth";
 
 import {
   FaMoon,
@@ -10,20 +11,14 @@ import {
   FaSave,
   FaWater,
   FaRulerVertical,
+  FaLock,
 } from "react-icons/fa";
 
-/* ================= DEFAULT SETTINGS ================= */
-
 const defaultSettings = {
-
   darkMode: true,
-
   alertsEnabled: true,
-
   soundEnabled: true,
-
   notificationEnabled: true,
-
   autoRelayCutoff: true,
 
   voltage: {
@@ -55,23 +50,17 @@ const defaultSettings = {
   },
 };
 
-/* ================= SETTINGS COMPONENT ================= */
-
 function Settings() {
-
-  // ================= LOAD SETTINGS =================
+  const [newPassword, setNewPassword] =
+    useState("");
 
   const [settings, setSettings] = useState(() => {
-
     try {
-
       const saved =
         JSON.parse(localStorage.getItem("settings"));
 
       return {
-
         ...defaultSettings,
-
         ...saved,
 
         voltage: {
@@ -104,23 +93,15 @@ function Settings() {
           ...(saved?.waterLevel || {}),
         },
       };
-
     } catch {
-
       return defaultSettings;
     }
   });
 
-  // ================= TOGGLE =================
-
   const toggle = (key) => {
-
     setSettings((prev) => {
-
       const updated = {
-
         ...prev,
-
         [key]: !prev[key],
       };
 
@@ -129,7 +110,6 @@ function Settings() {
         JSON.stringify(updated)
       );
 
-      // update app instantly
       window.dispatchEvent(
         new Event("settingsChanged")
       );
@@ -138,31 +118,22 @@ function Settings() {
     });
   };
 
-  // ================= THRESHOLD UPDATE =================
-
   const updateThreshold = (
     type,
     field,
     value
   ) => {
-
     setSettings((prev) => ({
-
       ...prev,
 
       [type]: {
-
         ...prev[type],
-
         [field]: Number(value),
       },
     }));
   };
 
-  // ================= SAVE =================
-
   const saveSettings = () => {
-
     localStorage.setItem(
       "settings",
       JSON.stringify(settings)
@@ -172,19 +143,11 @@ function Settings() {
       new Event("settingsChanged")
     );
 
-    alert("✅ Settings Saved Successfully");
+    alert("Settings saved successfully");
   };
 
-  // ================= RESET =================
-
   const resetSettings = () => {
-
-    if (
-      window.confirm(
-        "Reset all settings?"
-      )
-    ) {
-
+    if (window.confirm("Reset all settings?")) {
       localStorage.setItem(
         "settings",
         JSON.stringify(defaultSettings)
@@ -196,31 +159,50 @@ function Settings() {
         new Event("settingsChanged")
       );
 
-      alert("🔄 Settings Reset");
+      alert("Settings reset");
     }
   };
-  // ================= CLEAR HISTORY =================
 
   const clearHistory = () => {
-
     if (
       window.confirm(
-        "Clear all history?"
+        "Clear displayed history? Firebase history will not be deleted."
       )
     ) {
-
       localStorage.removeItem("history");
-
-      alert("🗑 History Cleared");
+      alert("Local history cleared");
     }
   };
 
-  // ================= THEME =================
+  const handleChangePassword = async () => {
+    if (!newPassword) {
+      alert("Please enter a new password");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      alert("Password must be at least 6 characters");
+      return;
+    }
+
+    try {
+      await Auth.changePassword(newPassword);
+      alert("Password updated successfully");
+      setNewPassword("");
+    } catch (error) {
+      if (error.code === "auth/requires-recent-login") {
+        alert(
+          "Please logout, login again, then change your password."
+        );
+      } else {
+        alert(error.message);
+      }
+    }
+  };
 
   const darkMode = settings.darkMode;
 
   return (
-
     <div
       style={{
         ...styles.container,
@@ -234,9 +216,8 @@ function Settings() {
           : "#0f172a",
       }}
     >
-
       <h1 style={styles.title}>
-        ⚙ Smart IoT Settings
+        Smart IoT Settings
       </h1>
 
       <div
@@ -248,9 +229,6 @@ function Settings() {
             : "rgba(255,255,255,0.7)",
         }}
       >
-
-        {/* ================= TOGGLES ================= */}
-
         <SettingRow
           icon={<FaMoon />}
           title="Dark Mode"
@@ -279,7 +257,7 @@ function Settings() {
         />
 
         <SettingRow
-          icon="📱"
+          icon={<FaBell />}
           title="Notifications"
           value={settings.notificationEnabled}
           onChange={() =>
@@ -288,15 +266,13 @@ function Settings() {
         />
 
         <SettingRow
-          icon="🔌"
+          icon={<FaPlug />}
           title="Auto Relay Cutoff"
           value={settings.autoRelayCutoff}
           onChange={() =>
             toggle("autoRelayCutoff")
           }
         />
-
-        {/* ================= THRESHOLDS ================= */}
 
         <InputRow
           icon={<FaBolt />}
@@ -368,7 +344,16 @@ function Settings() {
           }
         />
 
-        {/* ================= BUTTONS ================= */}
+        <InputRow
+          icon={<FaLock />}
+          title="New Password"
+          value={newPassword}
+          unit=""
+          type="password"
+          onChange={(e) =>
+            setNewPassword(e.target.value)
+          }
+        />
 
         <button
           onClick={saveSettings}
@@ -379,10 +364,18 @@ function Settings() {
         </button>
 
         <button
+          onClick={handleChangePassword}
+          style={styles.passwordButton}
+        >
+          <FaLock />
+          Change Password
+        </button>
+
+        <button
           onClick={resetSettings}
           style={styles.reset}
         >
-          🔄 Reset Settings
+          Reset Settings
         </button>
 
         <button
@@ -390,16 +383,12 @@ function Settings() {
           style={styles.delete}
         >
           <FaTrash />
-          Clear History
+          Clear Local History
         </button>
-
       </div>
-
     </div>
   );
 }
-
-/* ================= TOGGLE ROW ================= */
 
 function SettingRow({
   icon,
@@ -407,19 +396,14 @@ function SettingRow({
   value,
   onChange,
 }) {
-
   return (
-
     <div style={styles.row}>
-
       <div style={styles.left}>
-
         <div style={styles.icon}>
           {icon}
         </div>
 
         <h3>{title}</h3>
-
       </div>
 
       <button
@@ -434,12 +418,9 @@ function SettingRow({
       >
         {value ? "ON" : "OFF"}
       </button>
-
     </div>
   );
 }
-
-/* ================= INPUT ROW ================= */
 
 function InputRow({
   icon,
@@ -447,47 +428,36 @@ function InputRow({
   value,
   unit,
   onChange,
+  type = "number",
 }) {
-
   return (
-
     <div style={styles.row}>
-
       <div style={styles.left}>
-
         <div style={styles.icon}>
           {icon}
         </div>
 
         <h3>{title}</h3>
-
       </div>
 
       <div style={styles.inputGroup}>
-
         <input
-          type="number"
+          type={type}
           value={value}
           onChange={onChange}
           style={styles.input}
         />
 
-        <span>{unit}</span>
-
+        {unit && <span>{unit}</span>}
       </div>
-
     </div>
   );
 }
 
-/* ================= STYLES ================= */
-
 const styles = {
-
   container: {
     minHeight: "100vh",
     padding: "40px",
-    marginLeft: "260px",
     transition: "0.3s",
   },
 
@@ -502,7 +472,8 @@ const styles = {
     padding: "30px",
     borderRadius: "25px",
     backdropFilter: "blur(10px)",
-    boxShadow: "0 0 25px rgba(0,255,255,0.25)",
+    boxShadow:
+      "0 0 25px rgba(0,255,255,0.25)",
   },
 
   row: {
@@ -542,7 +513,7 @@ const styles = {
   },
 
   input: {
-    width: "90px",
+    width: "160px",
     padding: "10px",
     borderRadius: "10px",
     border: "none",
@@ -556,6 +527,19 @@ const styles = {
     padding: "15px",
     marginTop: "25px",
     background: "#06b6d4",
+    border: "none",
+    borderRadius: "12px",
+    color: "white",
+    fontSize: "17px",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+
+  passwordButton: {
+    width: "100%",
+    padding: "15px",
+    marginTop: "10px",
+    background: "#22c55e",
     border: "none",
     borderRadius: "12px",
     color: "white",
