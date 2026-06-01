@@ -273,7 +273,65 @@ ${totalEnergy.toFixed(3)} kWh
       } = await generateReport();
 
       /* ================= PDF ================= */
-
+autoTable(doc, {
+  startY: 65,
+  head: [["Parameter", "Min", "Max", "Average"]],
+  body: [
+    [
+      "Voltage",
+      `${voltageStats.min.toFixed(2)} V`,
+      `${voltageStats.max.toFixed(2)} V`,
+      `${voltageStats.avg.toFixed(2)} V`,
+    ],
+    [
+      "Current",
+      `${currentStats.min.toFixed(2)} A`,
+      `${currentStats.max.toFixed(2)} A`,
+      `${currentStats.avg.toFixed(2)} A`,
+    ],
+    [
+      "Power",
+      `${powerStats.min.toFixed(2)} W`,
+      `${powerStats.max.toFixed(2)} W`,
+      `${powerStats.avg.toFixed(2)} W`,
+    ],
+    [
+      "Water Flow",
+      `${waterFlowStats.min.toFixed(2)} L/min`,
+      `${waterFlowStats.max.toFixed(2)} L/min`,
+      `${waterFlowStats.avg.toFixed(2)} L/min`,
+    ],
+    [
+      "Water Level",
+      `${waterLevelStats.min.toFixed(2)} cm`,
+      `${waterLevelStats.max.toFixed(2)} cm`,
+      `${waterLevelStats.avg.toFixed(2)} cm`,
+    ],
+  ],
+});
+autoTable(doc, {
+  startY: doc.lastAutoTable.finalY + 15,
+  head: [[
+    "Date",
+    "Time",
+    "Voltage",
+    "Current",
+    "Power",
+    "Energy",
+    "Water Flow",
+    "Water Level",
+  ]],
+  body: filtered.map((item) => [
+    item.date,
+    item.time,
+    `${item.voltage} V`,
+    `${item.current} A`,
+    `${item.power} W`,
+    `${item.energy} kWh`,
+    `${item.waterFlow || 0} L/min`,
+    `${item.waterLevel || 0} cm`,
+  ]),
+});
       const doc =
         new jsPDF();
 
@@ -360,7 +418,27 @@ ${totalEnergy.toFixed(3)} kWh
           ]
         ),
       });
+const getStats = (items, key) => {
+  const values = items
+    .map((item) => Number(item[key] || 0))
+    .filter((value) => !Number.isNaN(value));
 
+  if (values.length === 0) {
+    return {
+      min: 0,
+      max: 0,
+      avg: 0,
+    };
+  }
+
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values),
+    avg:
+      values.reduce((sum, value) => sum + value, 0) /
+      values.length,
+  };
+};
       const timestamp =
         new Date()
           .toISOString()
@@ -548,7 +626,12 @@ ${totalEnergy.toFixed(3)} kWh
     </div>
   );
 }
-
+const voltageStats = getStats(filtered, "voltage");
+const currentStats = getStats(filtered, "current");
+const powerStats = getStats(filtered, "power");
+const energyStats = getStats(filtered, "energy");
+const waterFlowStats = getStats(filtered, "waterFlow");
+const waterLevelStats = getStats(filtered, "waterLevel");
 /* ================= STYLES ================= */
 
 const styles = {

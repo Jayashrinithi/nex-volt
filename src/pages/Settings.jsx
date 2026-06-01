@@ -199,7 +199,13 @@ function Settings() {
       alert("🔄 Settings Reset");
     }
   };
-
+const calibration = {
+  voltage: { offset: 0, multiplier: 1 },
+  current: { offset: 0, multiplier: 1 },
+  waterFlow: { offset: 0, multiplier: 1 },
+  waterLevel: { offset: 0, multiplier: 1 },
+};
+calibratedValue = rawValue * multiplier + offset;
   // ================= CLEAR HISTORY =================
 
   const clearHistory = () => {

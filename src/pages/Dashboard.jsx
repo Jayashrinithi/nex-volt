@@ -30,7 +30,7 @@ function Dashboard() {
   });
 
   const [alerts, setAlerts] = useState([]);
-
+const [status, setStatus] = useState({});
   const [lastUpdated, setLastUpdated] =
     useState("--:--");
 
@@ -137,13 +137,35 @@ useEffect(() => {
         setLastUpdated(
           now.toLocaleTimeString()
         );
+const [demoMode, setDemoMode] = useState(false);
+useEffect(() => {
+  if (!demoMode) return;
 
+  const interval = setInterval(() => {
+    setData({
+      voltage: 220 + Math.random() * 20,
+      current: 1 + Math.random() * 5,
+      power: 300 + Math.random() * 800,
+      energy: Math.random() * 5,
+      waterFlow: 2 + Math.random() * 10,
+      waterLevel: 5 + Math.random() * 12,
+      relay: Math.random() > 0.5,
+    });
+
+    setLastUpdated(new Date().toLocaleTimeString());
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [demoMode]);
+<button onClick={() => setDemoMode(!demoMode)}>
+  {demoMode ? "Stop Demo" : "Start Demo"}
+</button>
         // ================= ALERT CHECK =================
 
-        const newAlerts =
-          checkAlerts(formattedData);
+        const result = checkAlerts(formattedData);
 
-        setAlerts(newAlerts);
+setAlerts(result.alerts);
+setStatus(result.status);
 
         const previousAlerts =
           lastAlertsRef.current;
@@ -262,49 +284,41 @@ useEffect(() => {
           icon={<FaBolt />}
           title="Voltage"
           value={`${data.voltage.toFixed(1)} V`}
-          glow="#00e5ff"
-          danger={
-            data.voltage > 250 ||
-            data.voltage < 180
-          }
+          status={status.voltage}
         />
 
         <Card
           icon={<FaChargingStation />}
           title="Current"
           value={`${data.current.toFixed(2)} A`}
-          glow="#22c55e"
-          danger={data.current > 10}
+          status={status.current}
         />
 
         <Card
           icon={<FaBolt />}
           title="Power"
           value={`${data.power.toFixed(1)} W`}
-          glow="#f59e0b"
-          danger={data.power > 3000}
+          status={status.power}
         />
 
         <Card
           icon={<FaBatteryHalf />}
           title="Energy"
           value={`${data.energy.toFixed(3)} kWh`}
-          glow="#a855f7"
+          status={status.energy}
         />
 
         <Card
           icon={<FaWater />}
           title="Water Flow"
           value={`${data.waterFlow.toFixed(2)} L/min`}
-          glow="#06b6d4"
-          danger={data.waterFlow > 20}
+          status={status.waterFlow}
         />
         <Card
   icon={<FaRulerVertical />}
   title="Water Level"
   value={`${data.waterLevel.toFixed(1)} cm`}
-  glow="#14b8a6"
-  danger={data.waterLevel > 18}
+  status={status.waterLevel}
 />
       </div>
 
@@ -318,9 +332,8 @@ function Card({
   icon,
   title,
   value,
-  glow,
-  danger = false,
-}) {
+  status = "normal",
+}){
 
   return (
 
@@ -328,13 +341,26 @@ function Card({
       style={{
         ...styles.card,
 
-        boxShadow: danger
-          ? "0 0 25px red"
-          : `0 0 20px ${glow}`,
+        background:
+  status === "danger"
+    ? "rgba(255,0,0,0.25)"
+    : status === "warning"
+    ? "rgba(255,165,0,0.25)"
+    : "rgba(0,255,255,0.15)",
 
-        border: danger
-          ? "2px solid red"
-          : "1px solid rgba(255,255,255,0.08)",
+boxShadow:
+  status === "danger"
+    ? "0 0 25px red"
+    : status === "warning"
+    ? "0 0 25px orange"
+    : "0 0 25px cyan",
+
+border:
+  status === "danger"
+    ? "2px solid red"
+    : status === "warning"
+    ? "2px solid orange"
+    : "2px solid cyan",
       }}
     >
 
@@ -355,11 +381,17 @@ function Card({
         {value}
       </h1>
 
-      {danger && (
-        <p style={styles.warning}>
-          ⚠ Threshold Exceeded
-        </p>
-      )}
+      {status === "danger" && (
+  <p style={styles.warning}>
+    🚨 Danger
+  </p>
+)}
+
+{status === "warning" && (
+  <p style={{ color: "orange" }}>
+    ⚠ Warning
+  </p>
+)}
 
     </div>
   );

@@ -3,75 +3,115 @@ import { THRESHOLDS } from "../config/thresholds";
 export function checkAlerts(data = {}) {
   const alerts = [];
 
-  if (!THRESHOLDS) return alerts;
+  const status = {
+    voltage: "normal",
+    current: "normal",
+    power: "normal",
+    energy: "normal",
+    waterLevel: "normal",
+    waterFlow: "normal",
+  };
 
-  // Helper function (clean + reusable)
+  if (!THRESHOLDS) {
+    return { alerts, status };
+  }
+
   const addAlert = (condition, message) => {
     if (condition) alerts.push(message);
   };
 
   // ================= VOLTAGE =================
   if (data.voltage != null && THRESHOLDS.voltage) {
-    addAlert(
-      THRESHOLDS.voltage.min != null &&
-        data.voltage < THRESHOLDS.voltage.min,
-      `⚠ Low Voltage: ${data.voltage} V`
-    );
-
-    addAlert(
+    if (
       THRESHOLDS.voltage.max != null &&
-        data.voltage > THRESHOLDS.voltage.max,
-      `🚨 High Voltage: ${data.voltage} V`
-    );
+      data.voltage > THRESHOLDS.voltage.max
+    ) {
+      status.voltage = "danger";
+      alerts.push(`🚨 High Voltage: ${data.voltage} V`);
+    } else if (
+      THRESHOLDS.voltage.min != null &&
+      data.voltage < THRESHOLDS.voltage.min
+    ) {
+      status.voltage = "warning";
+      alerts.push(`⚠ Low Voltage: ${data.voltage} V`);
+    }
   }
 
   // ================= CURRENT =================
   if (data.current != null && THRESHOLDS.current) {
-    addAlert(
-      THRESHOLDS.current.min != null &&
-        data.current < THRESHOLDS.current.min,
-      `⚠ Low Current: ${data.current} A`
-    );
-
-    addAlert(
+    if (
       THRESHOLDS.current.max != null &&
-        data.current > THRESHOLDS.current.max,
-      `🚨 High Current: ${data.current} A`
-    );
+      data.current > THRESHOLDS.current.max
+    ) {
+      status.current = "danger";
+      alerts.push(`🚨 High Current: ${data.current} A`);
+    } else if (
+      THRESHOLDS.current.min != null &&
+      data.current < THRESHOLDS.current.min
+    ) {
+      status.current = "warning";
+      alerts.push(`⚠ Low Current: ${data.current} A`);
+    }
   }
 
   // ================= POWER =================
   if (data.power != null && THRESHOLDS.power) {
-    addAlert(
+    if (
       THRESHOLDS.power.max != null &&
-        data.power > THRESHOLDS.power.max,
-      `🚨 High Power: ${data.power} W`
-    );
+      data.power > THRESHOLDS.power.max
+    ) {
+      status.power = "danger";
+      alerts.push(`🚨 High Power: ${data.power} W`);
+    }
   }
 
   // ================= ENERGY =================
   if (data.energy != null && THRESHOLDS.energy) {
-    addAlert(
+    if (
       THRESHOLDS.energy.max != null &&
-        data.energy > THRESHOLDS.energy.max,
-      `📈 High Energy Usage: ${data.energy} kWh`
-    );
+      data.energy > THRESHOLDS.energy.max
+    ) {
+      status.energy = "danger";
+      alerts.push(`📈 High Energy Usage: ${data.energy} kWh`);
+    }
+  }
+
+  // ================= WATER LEVEL =================
+  if (data.waterLevel != null && THRESHOLDS.waterLevel) {
+    if (
+      THRESHOLDS.waterLevel.max != null &&
+      data.waterLevel > THRESHOLDS.waterLevel.max
+    ) {
+      status.waterLevel = "danger";
+      alerts.push(`🚨 High Water Level: ${data.waterLevel} cm`);
+    } else if (
+      THRESHOLDS.waterLevel.min != null &&
+      data.waterLevel < THRESHOLDS.waterLevel.min
+    ) {
+      status.waterLevel = "warning";
+      alerts.push(`⚠ Low Water Level: ${data.waterLevel} cm`);
+    }
   }
 
   // ================= WATER FLOW =================
   if (data.waterFlow != null && THRESHOLDS.waterFlow) {
-    addAlert(
-      THRESHOLDS.waterFlow.min != null &&
-        data.waterFlow < THRESHOLDS.waterFlow.min,
-      `💧 Low Water Flow: ${data.waterFlow} L/min`
-    );
-
-    addAlert(
+    if (
       THRESHOLDS.waterFlow.max != null &&
-        data.waterFlow > THRESHOLDS.waterFlow.max,
-      `🚨 High Water Flow: ${data.waterFlow} L/min`
-    );
+      data.waterFlow > THRESHOLDS.waterFlow.max
+    ) {
+      status.waterFlow = "danger";
+      alerts.push(`🚨 High Water Flow: ${data.waterFlow} L/min`);
+    } else if (
+      THRESHOLDS.waterFlow.min != null &&
+      data.waterFlow < THRESHOLDS.waterFlow.min
+    ) {
+      status.waterFlow = "warning";
+      alerts.push(`💧 Low Water Flow: ${data.waterFlow} L/min`);
+    }
   }
 
-  return alerts;
+  return {
+    alerts,
+    status,
+  };
 }
