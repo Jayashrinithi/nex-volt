@@ -109,13 +109,17 @@ function Reports() {
     const historyRef = ref(db, "history");
     const snapshot = await get(historyRef);
     const data = snapshot.val();
+    console.log("Firebase data:", data);
+console.log("From:", fromDateTime);
+console.log("To:", toDateTime);
     const reportData = data ? Object.values(data) : [];
 
     /* ================= FILTER ================= */
 
     const filtered = reportData.filter((item) => {
       const itemDateTime = parseDateTime(item.date, item.time);
-
+console.log("All Data:", reportData);
+console.log("Filtered Data:", filtered);
       return (
         itemDateTime &&
         itemDateTime >= fromDateTime &&
